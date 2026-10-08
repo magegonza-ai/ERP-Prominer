@@ -12,7 +12,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   reglas de negocio, casos de prueba y etapas (documento de referencia en la conversación del proyecto).
 - **Registro de decisiones de implementación**: [`docs/decisiones.md`](docs/decisiones.md).
 - **Etapas 1, 2 y 3** (Arquitectura y Base de Datos; Autenticación y seguridad; Datos
-  maestros): completadas y aprobadas (ver hitos). ETAPA 4 en curso (subetapa 4.1 aprobada).
+  maestros): completadas y aprobadas (ver hitos). ETAPA 4 en curso (subetapa 4.1 aprobada; 4.2 entregada).
 
 ## Stack
 
@@ -158,12 +158,19 @@ cd backend
       204 tests, cobertura 96%, E2E dev 32/32 y 28/28, migración `0003_drift_fix` que alinea
       modelo↔BD (`alembic check` limpio) — decisiones D25, D26 y D27.
 - [ ] **ETAPA 4 — Clientes, propietarios e inventario de cilindros** *(4.1 completada y
-      aprobada; 4.2 pendiente)*: **4.1** `/clientes` (rut único e inmutable, estados
-      `ACTIVO/INACTIVO/BLOQUEADO`, DELETE solo con cero referencias → 409) + receptores
-      autorizados anidados (acotados al cliente, `autorizado_por`, `vigente_hasta` ≥ fecha de
-      autorización) y `/propietarios` (tipo/rut inmutables, unicidad parcial `(rut, tipo)`,
-      vínculo `cliente_id` obligatorio solo en tipo CLIENTE) — 228 tests, cobertura 96%,
-      E2E dev 45/45, decisión D28. *(4.2 pendiente: cilindros, ubicaciones y movimientos)*
+      aprobada; 4.2 entregada, pendiente de aprobación)*: **4.1** `/clientes` (rut único e
+      inmutable, estados `ACTIVO/INACTIVO/BLOQUEADO`, DELETE solo con cero referencias →
+      409) + receptores autorizados anidados (acotados al cliente, `autorizado_por`,
+      `vigente_hasta` ≥ fecha de autorización) y `/propietarios` (tipo/rut inmutables,
+      unicidad parcial `(rut, tipo)`, vínculo `cliente_id` obligatorio solo en tipo CLIENTE)
+      — 228 tests, cobertura 96%, E2E dev 45/45, decisión D28; **4.2** `/ubicaciones`
+      (catálogo: `codigo` único e inmutable, `tipo` mutable, estados `ACTIVA/INACTIVA`,
+      DELETE solo sin referencias → 409), `/cilindros` (identidad única e inmutable, nacen
+      `REGISTRADO`, FKs → 404, campos no editables, DELETE solo sin historial en 8 tablas →
+      409 `HAS_HISTORY`) y `/movimientos` (solo `POST`+`GET`, guard OR TAREA_15/16,
+      atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
+      ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
+      59/59, decisión D29.
 - [ ] **ETAPAS 5–12** (pendientes)
 
 ## Decisiones

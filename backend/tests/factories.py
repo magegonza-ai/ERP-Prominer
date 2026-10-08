@@ -2,10 +2,10 @@
 Fábricas y helpers compartidos de los tests de la ETAPA 2.1.
 
 Patrón get-or-create: la BD de pruebas `agas_cilindros_test` persiste entre
-corridas locales, así que los códigos fijos del RBAC (TAREA_01/02/28/29/30 y
-PERM_01..PERM_10) se reutilizan y su matriz `tarea_permiso` solo se completa
-si falta la fila (y se repara su estado). En CI la BD nace vacía y las
-fábricas crean todo desde cero.
+corridas locales, así que los códigos fijos del RBAC (TAREA_01/02/03/15/16/
+28/29/30 y PERM_01..PERM_10) se reutilizan y su matriz `tarea_permiso` solo
+se completa si falta la fila (y se repara su estado). En CI la BD nace vacía y
+las fábricas crean todo desde cero.
 
 Todos los usuarios/empleados creados usan prefijos uuid → únicos por test
 (sin colisiones entre tests ni entre corridas).
@@ -35,6 +35,9 @@ CLAVE = "Admin2026!"  # política: mayúscula, minúscula, dígito y especial
 # Códigos fijos del RBAC (scripts/seed_data.py).
 TAREA_CLIENTES = "TAREA_01"  # registrar clientes (y receptores autorizados)
 TAREA_PROPIETARIOS = "TAREA_02"  # registrar propietarios de cilindros
+TAREA_CILINDROS = "TAREA_03"  # registrar cilindros (inventario)
+TAREA_CAMBIO_UBICACION = "TAREA_15"  # cambiar ubicación (operativo)
+TAREA_MOVIMIENTOS = "TAREA_16"  # registrar movimientos (operativo)
 TAREA_USUARIOS = "TAREA_28"  # administrar usuarios, empleados y sesiones
 TAREA_CATALOGOS = "TAREA_29"  # administrar catálogos (tareas y permisos)
 TAREA_AUDITORIA = "TAREA_30"  # revisar la bitácora de auditoría

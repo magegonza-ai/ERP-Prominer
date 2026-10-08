@@ -143,6 +143,40 @@ class RequireTaskPermission:
         return user
 
 
+class RequireAnyTaskPermission:
+    """
+    Dependencia de endpoint: exige **al menos una** tarea RBAC vigente de
+    las indicadas (dominio en alternativa) Y un permiso de acción.
+
+    Uso:
+        @router.post("/movimientos")
+        async def crear(
+            user=Depends(RequireAnyTaskPermission(("TAREA_15", "TAREA_16"), "PERM_02"))
+        ):
+            ...
+
+    La semilla asigna «Cambiar ubicación» (TAREA_15) y «Registrar
+    movimientos» (TAREA_16) para la misma operación; cualquiera de los dos
+    dominios habilita el endpoint. Sin ninguna de las tareas → 403
+    (menciona todas); sin el permiso → 403 (menciona el permiso).
+    """
+
+    def __init__(self, tareas: tuple[str, ...], permiso: str) -> None:
+        self.tareas = tareas
+        self.permiso = permiso
+
+    async def __call__(self, user: CurrentUser, session: SessionDep) -> Usuario:
+        for tarea in self.tareas:
+            if await has_task(session, user.id, tarea):
+                break
+        else:
+            enumeradas = " o ".join(f"'{t}'" for t in self.tareas)
+            raise PermissionDenied(action=f"la operación requerida (tarea {enumeradas})")
+        if not await has_permission(session, user.id, self.permiso):
+            raise PermissionDenied(action=f"la operación requerida (permiso '{self.permiso}')")
+        return user
+
+
 # ============================================================
 # HELPERS DE ENTIDADES (usados por todos los endpoints CRUD)
 # ============================================================

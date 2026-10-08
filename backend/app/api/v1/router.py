@@ -17,10 +17,12 @@ from app.api.v1.endpoints.areas import router as areas_router
 from app.api.v1.endpoints.auditoria import router as auditoria_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.categorias import router as categorias_router
+from app.api.v1.endpoints.cilindros import router as cilindros_router
 from app.api.v1.endpoints.clientes import router as clientes_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.movimientos import router as movimientos_router
 from app.api.v1.endpoints.parametros import router as parametros_router
 from app.api.v1.endpoints.permisos import router as permisos_router
 from app.api.v1.endpoints.propietarios import router as propietarios_router
@@ -29,6 +31,7 @@ from app.api.v1.endpoints.tareas import router as tareas_router
 from app.api.v1.endpoints.tasas_impuesto import router as tasas_impuesto_router
 from app.api.v1.endpoints.tipos_documento import router as tipos_documento_router
 from app.api.v1.endpoints.tipos_gas import router as tipos_gas_router
+from app.api.v1.endpoints.ubicaciones import router as ubicaciones_router
 from app.api.v1.endpoints.usuarios import router as usuarios_router
 
 api_router = APIRouter()
@@ -69,8 +72,12 @@ api_router.include_router(tasas_impuesto_router, prefix="/tasas-impuesto")
 api_router.include_router(clientes_router, prefix="/clientes")
 api_router.include_router(propietarios_router, prefix="/propietarios")
 
-# Etapa 4 (cont.) - subetapa 4.2:
-#   cilindros, ubicaciones, movimientos
+# Etapa 4 (cont.) - subetapa 4.2: cilindros (TAREA_03), ubicaciones
+# (TAREA_29, catálogo) y movimientos (TAREA_15 ∨ TAREA_16) — el
+# movimiento es la única vía de cambiar ubicación/estado de un cilindro.
+api_router.include_router(ubicaciones_router, prefix="/ubicaciones")
+api_router.include_router(cilindros_router, prefix="/cilindros")
+api_router.include_router(movimientos_router, prefix="/movimientos")
 
 # Etapa 5 - Operaciones:
 #   recepciones, inspecciones, ordenes_llenado, ordenes_reparacion, control_calidad
