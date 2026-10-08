@@ -54,3 +54,16 @@ tomadas durante la **implementación** que ajustan o precisan lo definido en el 
 | **Decisión** | Documentar que la **prueba real de `docker compose up`** (Postgres 16 + Redis + MinIO + API) quedó pendiente del reinicio. La infraestructura Docker (Dockerfile, 3 compose, nginx) ya está versionada y validada estáticamente (YAML OK, llaves JWT generadas y verificadas). |
 | **Pasos post-reinicio** | 1) Abrir Docker Desktop y aceptar el acuerdo. 2) `docker --version` y `docker info`. 3) `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`. |
 | **Impacto** | Sin impacto en código. Habilita el entorno de ejecución local reproduciendo infraestructura de producción. |
+
+---
+
+## D20 — Sustitución de MinIO por SeaweedFS (almacén de objetos)
+
+| Campo | Descripción |
+|-------|-------------|
+| **Estado** | ✅ Aplicada y validada (2026-10-08) |
+| **Fecha** | 2026-10-08 |
+| **Contexto** | El stack aprobado contemplaba **MinIO** como almacén de objetos S3. El fabricante **archivó el proyecto open-source de MinIO Server** (aviso oficial en `dl.min.io`: *"The open-source MinIO Server, MinIO Client (mc) and MinIO KES projects are archived and no longer maintained"*). Consecuencias verificadas: Docker Hub `minio/minio` → 404; Quay `quay.io/minio/minio` → requiere autenticación (repo migrado a **AIStor**); la nueva imagen `quay.io/minio/aistor/minio` **requiere licencia comercial** (free tier con registro manual); `dl.min.io` ya no sirve binarios (HTTP 410) y GitHub Releases no publica binarios Linux. |
+| **Decisión** | Sustituir MinIO por **SeaweedFS** como servidor S3-compatible. Motivos: (1) licencia **Apache-2.0** (sin fricción de licencias en dev/CI); (2) proyecto **activo** con imagen oficial en Docker Hub (`chrislusf/seaweedfs`, validada v4.48); (3) **S3-compatible** → la configuración del backend (`MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET`) permanece sin cambios de código; (4) un solo contenedor y arranque simple (`weed server -s3`). Se descartó Garage (exige archivo de config + pasos de *layout* adicionales) y AIStor (licenciado). |
+| **Detalles técnicos** | El gateway S3 de SeaweedFS escucha en el puerto **8333** interno (el flag `-s3.port` no aplica dentro de `weed server`); el host lo expone como **9000** (`9000:8333`). Interfaz web Filer/Status en **8888**. Servicio compose renombrado a `seaweedfs`; `MINIO_ENDPOINT=seaweedfs:8333` en el API. Volumen `s3data`. En dev se aceptan credenciales arbitrarias (default de SeaweedFS); en **producción** debe montarse un archivo `-s3.config` con usuarios/recurso S3 reales (pendiente cuando se construyan los módulos de adjuntos). |
+| **Impacto** | Infraestructura: sustituye la imagen MinIO. Código backend: ninguno (config S3 genérica). Documentación y compose actualizados. |

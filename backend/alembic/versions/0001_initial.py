@@ -796,7 +796,7 @@ def upgrade() -> None:
         ),
         sa.Column("entidad_tipo", sa.String(20), nullable=False),
         sa.Column("entidad_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("criterios", postgresql.JSONB, nullable=False, server_default="'{}'::jsonb"),
+        sa.Column("criterios", postgresql.JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
         sa.Column("precio_neto", sa.Numeric(14, 2), nullable=False),
         sa.Column("tasa_impuesto_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tasa_impuesto.id"), nullable=True),
         sa.Column("vigencia_desde", sa.Date, nullable=False, server_default=sa.text("CURRENT_DATE")),

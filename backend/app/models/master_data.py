@@ -177,7 +177,6 @@ class Empleado(BaseModel, SoftDeleteMixin):
     usuario: Mapped[Usuario | None] = relationship(back_populates="empleado", uselist=False)
     tareas_asignadas: Mapped[List[EmpleadoTarea]] = relationship(back_populates="empleado")
     tareas_responsable: Mapped[List[TareaAsignada]] = relationship(back_populates="responsable")
-    cambios_propietario_autorizados: Mapped[List[CambioPropietario]] = relationship(back_populates="usuario_autoriza")
 
     __table_args__ = (
         CheckConstraint(
@@ -213,17 +212,32 @@ class Usuario(BaseModel):
     # Relaciones
     empleado: Mapped[Empleado | None] = relationship(back_populates="usuario")
     sesiones: Mapped[List[Sesion]] = relationship(back_populates="usuario")
-    ordenes_creadas: Mapped[List[OrdenTrabajo]] = relationship(back_populates="usuario_creador")
-    ordenes_asignadas: Mapped[List[OrdenTrabajo]] = relationship(back_populates="usuario_asignado")
+    ordenes_creadas: Mapped[List[OrdenTrabajo]] = relationship(
+        foreign_keys="OrdenTrabajo.usuario_creador_id", back_populates="usuario_creador"
+    )
+    ordenes_asignadas: Mapped[List[OrdenTrabajo]] = relationship(
+        foreign_keys="OrdenTrabajo.usuario_asignado_id", back_populates="usuario_asignado"
+    )
     recepciones: Mapped[List[Recepcion]] = relationship(back_populates="usuario_responsable")
     inspecciones: Mapped[List[Inspeccion]] = relationship(back_populates="usuario")
     controles_calidad: Mapped[List[ControlCalidad]] = relationship(back_populates="usuario")
-    tareas_asignadas_creadas: Mapped[List[TareaAsignada]] = relationship(back_populates="creado_por")
-    entregas: Mapped[List[Entrega]] = relationship(back_populates="usuario_responsable")
-    documentos: Mapped[List[DocumentoComercial]] = relationship(back_populates="creado_por")
-    pagos: Mapped[List[Pago]] = relationship(back_populates="creado_por")
+    tareas_asignadas_creadas: Mapped[List[TareaAsignada]] = relationship(
+        primaryjoin="foreign(TareaAsignada.creado_por)==Usuario.id", viewonly=True
+    )
+    entregas: Mapped[List[Entrega]] = relationship(
+        foreign_keys="Entrega.usuario_responsable_id", back_populates="usuario_responsable"
+    )
+    documentos: Mapped[List[DocumentoComercial]] = relationship(
+        primaryjoin="foreign(DocumentoComercial.creado_por)==Usuario.id", viewonly=True
+    )
+    pagos: Mapped[List[Pago]] = relationship(
+        primaryjoin="foreign(Pago.creado_por)==Usuario.id", viewonly=True
+    )
     notificaciones: Mapped[List[Notificacion]] = relationship(back_populates="usuario")
     auditorias: Mapped[List[Auditoria]] = relationship(back_populates="usuario")
+    cambios_propietario_autorizados: Mapped[List[CambioPropietario]] = relationship(
+        back_populates="usuario_autoriza"
+    )
 
     __table_args__ = (
         CheckConstraint("estado IN ('ACTIVO','BLOQUEADO','EXPIRADO','PENDIENTE_ACTIVACION')", name="ck_usuario_estado"),

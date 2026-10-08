@@ -142,7 +142,7 @@ async def create_superadmin(
     print("=" * 60)
 
 
-def main() -> None:
+async def main() -> None:
     parser = argparse.ArgumentParser(description="Crear superadministrador del sistema")
     parser.add_argument("--username", default="admin", help="Nombre de usuario (default: admin)")
     parser.add_argument("--email", default="admin@agas.cl", help="Correo electrónico")
@@ -152,19 +152,17 @@ def main() -> None:
     parser.add_argument("--apellidos", default="Administrador", help="Apellidos")
     args = parser.parse_args()
 
-    asyncio.run(init_db())
-    asyncio.run(
-        create_superadmin(
-            username=args.username,
-            email=args.email,
-            password=args.password,
-            rut=args.rut,
-            nombres=args.nombres,
-            apellidos=args.apellidos,
-        )
+    await init_db()
+    await create_superadmin(
+        username=args.username,
+        email=args.email,
+        password=args.password,
+        rut=args.rut,
+        nombres=args.nombres,
+        apellidos=args.apellidos,
     )
-    asyncio.run(close_db())
+    await close_db()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

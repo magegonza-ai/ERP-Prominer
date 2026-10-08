@@ -98,10 +98,17 @@ class Cilindro(BaseModel, SoftDeleteMixin):
     entregas: Mapped[List[DetalleEntrega]] = relationship(back_populates="cilindro")
     cambios_propietario: Mapped[List[CambioPropietario]] = relationship(back_populates="cilindro")
     fotografias: Mapped[List[Fotografia]] = relationship(
-        primaryjoin="and_(Cilindro.id==Fotografia.entidad_id, Fotografia.entidad_tipo=='CILINDRO')", viewonly=True
+        primaryjoin=(
+            "and_(Cilindro.id==foreign(Fotografia.entidad_id), "
+            "Fotografia.entidad_tipo=='CILINDRO')"
+        ),
+        viewonly=True,
     )
     documentos_adjuntos: Mapped[List[DocumentoAdjunto]] = relationship(
-        primaryjoin="and_(Cilindro.id==DocumentoAdjunto.entidad_id, DocumentoAdjunto.entidad_tipo=='CILINDRO')",
+        primaryjoin=(
+            "and_(Cilindro.id==foreign(DocumentoAdjunto.entidad_id), "
+            "DocumentoAdjunto.entidad_tipo=='CILINDRO')"
+        ),
         viewonly=True,
     )
 

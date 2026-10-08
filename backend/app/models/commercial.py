@@ -50,17 +50,32 @@ class Producto(BaseModel, SoftDeleteMixin):
     # Relaciones
     categoria: Mapped[Categoria] = relationship(back_populates="productos")
     tasa_impuesto: Mapped[TasaImpuesto | None] = relationship(back_populates="productos")
-    detalles_lista_precios: Mapped[List[DetalleListaPrecios]] = relationship(back_populates="producto")
+    detalles_lista_precios: Mapped[List[DetalleListaPrecios]] = relationship(
+        primaryjoin=(
+            "and_(Producto.id==foreign(DetalleListaPrecios.entidad_id), "
+            "DetalleListaPrecios.entidad_tipo=='PRODUCTO')"
+        ),
+        viewonly=True,
+    )
     detalles_presupuesto: Mapped[List[DetallePresupuesto]] = relationship(
-        primaryjoin="and_(Producto.id==DetallePresupuesto.entidad_id, DetallePresupuesto.entidad_tipo=='PRODUCTO')",
+        primaryjoin=(
+            "and_(Producto.id==foreign(DetallePresupuesto.entidad_id), "
+            "DetallePresupuesto.entidad_tipo=='PRODUCTO')"
+        ),
         viewonly=True,
     )
     detalles_valorizacion: Mapped[List[DetalleValorizacion]] = relationship(
-        primaryjoin="and_(Producto.id==DetalleValorizacion.entidad_id, DetalleValorizacion.entidad_tipo=='PRODUCTO')",
+        primaryjoin=(
+            "and_(Producto.id==foreign(DetalleValorizacion.entidad_id), "
+            "DetalleValorizacion.entidad_tipo=='PRODUCTO')"
+        ),
         viewonly=True,
     )
     detalles_entrega: Mapped[List[DetalleEntrega]] = relationship(
-        primaryjoin="and_(Producto.id==DetalleEntrega.entidad_id, DetalleEntrega.entidad_tipo=='PRODUCTO')",
+        primaryjoin=(
+            "and_(Producto.id==foreign(DetalleEntrega.entidad_id), "
+            "DetalleEntrega.entidad_tipo=='PRODUCTO')"
+        ),
         viewonly=True,
     )
 
@@ -87,17 +102,29 @@ class Servicio(BaseModel, SoftDeleteMixin):
     # Relaciones
     categoria: Mapped[Categoria] = relationship(back_populates="servicios")
     tasa_impuesto: Mapped[TasaImpuesto | None] = relationship(back_populates="servicios")
-    detalles_lista_precios: Mapped[List[DetalleListaPrecios]] = relationship(back_populates="servicio")
+    detalles_lista_precios: Mapped[List[DetalleListaPrecios]] = relationship(
+        primaryjoin=(
+            "and_(Servicio.id==foreign(DetalleListaPrecios.entidad_id), "
+            "DetalleListaPrecios.entidad_tipo=='SERVICIO')"
+        ),
+        viewonly=True,
+    )
     detalles_presupuesto: Mapped[List[DetallePresupuesto]] = relationship(
-        primaryjoin="and_(Servicio.id==DetallePresupuesto.entidad_id, DetallePresupuesto.entidad_tipo=='SERVICIO')",
+        primaryjoin=(
+            "and_(Servicio.id==foreign(DetallePresupuesto.entidad_id), "
+            "DetallePresupuesto.entidad_tipo=='SERVICIO')"
+        ),
         viewonly=True,
     )
     detalles_valorizacion: Mapped[List[DetalleValorizacion]] = relationship(
-        primaryjoin="and_(Servicio.id==DetalleValorizacion.entidad_id, DetalleValorizacion.entidad_tipo=='SERVICIO')",
+        primaryjoin=(
+            "and_(Servicio.id==foreign(DetalleValorizacion.entidad_id), "
+            "DetalleValorizacion.entidad_tipo=='SERVICIO')"
+        ),
         viewonly=True,
     )
     detalles_entrega: Mapped[List[DetalleEntrega]] = relationship(
-        primaryjoin="and_(Servicio.id==DetalleEntrega.entidad_id, DetalleEntrega.entidad_tipo=='SERVICIO')",
+        primaryjoin="and_(Servicio.id==foreign(DetalleEntrega.entidad_id), DetalleEntrega.entidad_tipo=='SERVICIO')",
         viewonly=True,
     )
 
@@ -204,7 +231,10 @@ class Presupuesto(BaseModel, SoftDeleteMixin):
         back_populates="presupuesto", cascade="all, delete-orphan"
     )
     valorizaciones: Mapped[List[Valorizacion]] = relationship(
-        primaryjoin="and_(Presupuesto.id==Valorizacion.operacion_id, Valorizacion.operacion_tipo=='PRESUPUESTO')",
+        primaryjoin=(
+            "and_(Presupuesto.id==foreign(Valorizacion.operacion_id), "
+            "Valorizacion.operacion_tipo=='PRESUPUESTO')"
+        ),
         viewonly=True,
     )
     presupuesto_original: Mapped[Presupuesto | None] = relationship(

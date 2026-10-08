@@ -21,7 +21,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS (pendiente ETAPA 3+) |
 | Base de datos | PostgreSQL 16 |
 | Cache / colas | Redis, Celery |
-| Almacenamiento | MinIO (adjuntos y backups) |
+| Almacenamiento | SeaweedFS S3 (adjuntos y backups; D20) |
 | Autenticación | JWT RS256 + TOTP 2FA, RBAC por tareas/permisos |
 | Infraestructura | Docker Compose, GitHub Actions (CI/CD) |
 
@@ -45,7 +45,7 @@ ERP-Prominer/
 │   └── pyproject.toml      # Lint (ruff), tipado (mypy), pytest
 ├── deploy/
 │   └── nginx/              # Reverse proxy de producción
-├── docker-compose.yml      # Postgres 16 + Redis + MinIO + API
+├── docker-compose.yml      # Postgres 16 + Redis + SeaweedFS + API
 ├── docker-compose.dev.yml  # Override desarrollo (reload)
 ├── docker-compose.prod.yml # Override producción (+ nginx)
 ├── docs/                   # Documentación del proyecto (anexo decisiones)
@@ -89,7 +89,7 @@ Copy-Item .env.example .env
 
 ## Ejecución con Docker
 
-Requiere **Docker (con Docker Compose v2)**. Levanta PostgreSQL 16, Redis, MinIO y la API.
+Requiere **Docker (con Docker Compose v2)**. Levanta PostgreSQL 16, Redis, SeaweedFS y la API.
 
 ```powershell
 # 1) Llaves JWT (primera vez)
@@ -103,7 +103,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 #   API      → http://localhost:8000   (Swagger /docs en DEBUG)
 #   Postgres → localhost:5432          (agas_user / agas_cilindros)
 #   Redis    → localhost:6379
-#   MinIO    → http://localhost:9001   (consola: minioadmin / minioadmin123)
+#   SeaweedFS → http://localhost:9000  (API S3; interfaz: http://localhost:8888)
 
 # Logs y estado
 docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api

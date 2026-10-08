@@ -72,7 +72,7 @@ class OrdenTrabajo(BaseModel, SoftDeleteMixin):
     controles_calidad: Mapped[List[ControlCalidad]] = relationship(back_populates="orden_relacionada")
     valorizaciones: Mapped[List[Valorizacion]] = relationship(
         primaryjoin=(
-            "and_(OrdenTrabajo.id==Valorizacion.operacion_id, "
+            "and_(OrdenTrabajo.id==foreign(Valorizacion.operacion_id), "
             "Valorizacion.operacion_tipo.in_(['ORDEN_LLENADO','ORDEN_REPARACION','INSPECCION']))"
         ),
         viewonly=True,

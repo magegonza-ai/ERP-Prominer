@@ -71,7 +71,7 @@ class Entrega(BaseModel, SoftDeleteMixin):
     # Relaciones
     cliente_recibe: Mapped[Cliente] = relationship()
     propietario: Mapped[Propietario] = relationship()
-    usuario_responsable: Mapped[Usuario] = relationship()
+    usuario_responsable: Mapped[Usuario] = relationship(foreign_keys=[usuario_responsable_id])
     documento: Mapped[DocumentoComercial | None] = relationship()
     excepcion_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[excepcion_usuario_id])
     valorizacion: Mapped[Valorizacion | None] = relationship(back_populates="entrega")
@@ -247,7 +247,7 @@ class CambioPropietario(BaseModel):
     cilindro: Mapped[Cilindro] = relationship(back_populates="cambios_propietario")
     propietario_anterior: Mapped[Propietario] = relationship(foreign_keys=[propietario_anterior_id])
     propietario_nuevo: Mapped[Propietario] = relationship(foreign_keys=[propietario_nuevo_id])
-    usuario_autoriza: Mapped[Usuario] = relationship()
+    usuario_autoriza: Mapped[Usuario] = relationship(back_populates="cambios_propietario_autorizados")
 
     __table_args__ = (Index("idx_cambio_prop_cilindro_fecha", "cilindro_id", "fecha"),)
 

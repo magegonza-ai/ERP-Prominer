@@ -43,23 +43,23 @@ services:
       retries: 12
     restart: unless-stopped
 
-  minio:
-    image: minio/minio:latest
-    container_name: agas_minio
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+  # Almacén de objetos S3-compatible (D20, sustituye a MinIO que fue archivado).
+  # SeaweedFS: Apache-2.0, activo. Gateway S3 interno en :8333; el host usa :9000.
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: agas_seaweedfs
+    command: ["server", "-s3", "-dir=/data"]
     ports:
-      - "9000:9000"   # API S3
-      - "9001:9001"   # Consola
+      - "9000:8333"   # API S3 (host 9000 → contenedor 8333)
+      - "8888:8888"   # Interfaz web Filer/Status
     volumes:
-      - miniodata:/data
+      - s3data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8333/"]
       interval: 10s
       timeout: 5s
       retries: 12
+      start_period: 20s
     restart: unless-stopped
 
   api:
@@ -74,7 +74,7 @@ services:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       REDIS_HOST: redis
-      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: seaweedfs:8333
       JWT_PRIVATE_KEY_PATH: /app/secrets/jwt_private.pem
       JWT_PUBLIC_KEY_PATH: /app/secrets/jwt_public.pem
     volumes:
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
     healthcheck:
       test:
@@ -103,4 +103,4 @@ services:
 volumes:
   pgdata:
   redisdata:
-  miniodata:
+  s3data:
