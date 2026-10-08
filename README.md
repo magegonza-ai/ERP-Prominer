@@ -149,12 +149,14 @@ cd backend
       **empleados** (con asignación de tareas), **tareas** y **permisos** (matriz `tarea_permiso`),
       **sesiones** (listado/revocación) y **auditoría** (solo lectura con filtros), todo bajo la
       matriz RBAC dominio×acción (TAREA_28/29/30) — 126 tests, cobertura 95%, E2E dev 39/39.
-- [ ] **ETAPA 3 — Datos maestros** *(subetapa 3.1 entregada, pendiente de aprobación)*: catálogos
-      simples `/areas`, `/categorias` (jerárquica con anti-ciclos), `/tipos-gas`, `/formas-pago` y
-      `/tipos-documento` (CRUD con guard TAREA_29, `codigo` único e inmutable, estados por
-      `Literal`, `DELETE` solo sin referencias → 409) — 176 tests, cobertura 96%, E2E dev 32/32,
+- [ ] **ETAPA 3 — Datos maestros** *(3.1 completada y aprobada; 3.2 entregada, pendiente de
+      aprobación)*: catálogos simples `/areas`, `/categorias` (jerárquica con anti-ciclos),
+      `/tipos-gas`, `/formas-pago` y `/tipos-documento` (guard TAREA_29, `codigo` único e
+      inmutable, estados por `Literal`, `DELETE` solo sin referencias → 409); y **3.2**
+      `/parametros` (PK `clave`, coacción de `valor` al `tipo` declarado, `editable=false`
+      → 409 `READONLY`) + `/tasas-impuesto` (vigencias con `cerrar_vigencia`, `valor` 0–100,
+      un solo `es_default` global) — 204 tests, cobertura 96%, E2E dev 32/32 y 28/28,
       migración `0003_drift_fix` que alinea modelo↔BD (`alembic check` limpio).
-      *Subetapa 3.2 (pendiente): parámetros del sistema y tasas de impuesto.*
 - [ ] **ETAPAS 4–12** (pendientes)
 
 ## Decisiones

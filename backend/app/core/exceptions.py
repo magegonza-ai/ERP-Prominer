@@ -217,6 +217,16 @@ class HasHistoryError(Conflict):
         super().__init__(msg)
 
 
+class ReadOnlyError(Conflict):
+    """Registro marcado como no editable (solo se cambia por seed/migración)."""
+
+    code = "READONLY"
+
+    def __init__(self, entity: str, message: str | None = None):
+        msg = message or f"{entity} es de solo lectura y no puede modificarse ni eliminarse."
+        super().__init__(msg)
+
+
 # ============================================================
 # 422 - UNPROCESSABLE (reglas de negocio)
 # ============================================================

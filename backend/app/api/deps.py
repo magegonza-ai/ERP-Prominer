@@ -175,9 +175,11 @@ async def verificar_unico(
     """
     if valor is None:
         return
-    stmt = select(model.id).where(getattr(model, campo) == valor)
+    # PK genérica: `id` en la mayoría de modelos, `clave` en `parametro`.
+    pk = model.__mapper__.primary_key[0]
+    stmt = select(pk).where(getattr(model, campo) == valor)
     if exclude_id is not None:
-        stmt = stmt.where(model.id != exclude_id)
+        stmt = stmt.where(pk != exclude_id)
     if (await session.execute(stmt.limit(1))).scalar_one_or_none() is not None:
         raise DuplicateValue(campo, str(valor))
 

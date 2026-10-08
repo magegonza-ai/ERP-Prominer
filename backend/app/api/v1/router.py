@@ -20,9 +20,11 @@ from app.api.v1.endpoints.categorias import router as categorias_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.parametros import router as parametros_router
 from app.api.v1.endpoints.permisos import router as permisos_router
 from app.api.v1.endpoints.sesiones import router as sesiones_router
 from app.api.v1.endpoints.tareas import router as tareas_router
+from app.api.v1.endpoints.tasas_impuesto import router as tasas_impuesto_router
 from app.api.v1.endpoints.tipos_documento import router as tipos_documento_router
 from app.api.v1.endpoints.tipos_gas import router as tipos_gas_router
 from app.api.v1.endpoints.usuarios import router as usuarios_router
@@ -48,15 +50,16 @@ api_router.include_router(permisos_router, prefix="/permisos")
 api_router.include_router(sesiones_router, prefix="/sesiones")
 api_router.include_router(auditoria_router, prefix="/auditoria")
 
-# Etapa 3 - Datos maestros:
-#   subetapa 3.1: catálogos simples (áreas, categorías, tipos de gas,
-#   formas de pago, tipos de documento) — dominio RBAC TAREA_29.
-#   subetapa 3.2 (pendiente): parámetros del sistema y tasas de impuesto.
+# Etapa 3 - Datos maestros (subetapas 3.1 y 3.2): catálogos simples
+# (áreas, categorías, tipos de gas, formas de pago, tipos de documento),
+# parámetros del sistema y tasas de impuesto — dominio RBAC TAREA_29.
 api_router.include_router(areas_router, prefix="/areas")
 api_router.include_router(categorias_router, prefix="/categorias")
 api_router.include_router(tipos_gas_router, prefix="/tipos-gas")
 api_router.include_router(formas_pago_router, prefix="/formas-pago")
 api_router.include_router(tipos_documento_router, prefix="/tipos-documento")
+api_router.include_router(parametros_router, prefix="/parametros")
+api_router.include_router(tasas_impuesto_router, prefix="/tasas-impuesto")
 
 # Etapa 3 (cont.) - Maestros:
 #   clientes, propietarios

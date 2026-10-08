@@ -1,9 +1,10 @@
 """
-Esquemas de los catálogos simples (ETAPA 3.1).
+Esquemas de los catálogos de la ETAPA 3 (subetapas 3.1 y 3.2).
 
 Área, categoría (jerárquica), tipo de gas, forma de pago y tipo de
-documento. Estados validados con `Literal` (solo `ck_categoria_tipo`
-existe en BD); `codigo` es único e inmutable en PATCH y el `null` en la
+documento (3.1); parámetros del sistema y tasas de impuesto (3.2).
+Estados validados con `Literal` (solo `ck_categoria_tipo` existe en BD);
+`codigo`/`clave` son únicos e inmutables en PATCH y el `null` en la
 actualización parcial significa "sin cambio" (el endpoint filtra antes de
 aplicar, igual que en la ETAPA 2.1).
 """
@@ -11,13 +12,17 @@ aplicar, igual que en la ETAPA 2.1).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 # Valores permitidos por ck_categoria_tipo.
 TipoCategoria = Literal["PRODUCTO", "SERVICIO", "AMBOS"]
+
+# Valores permitidos por ck_parametro_tipo.
+TipoParametro = Literal["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "JSON", "DATE"]
 
 # Estados por módulo, con el género de su default en el modelo (ETAPA 1).
 EstadoArea = Literal["ACTIVA", "INACTIVA"]
@@ -212,6 +217,86 @@ class TipoDocumentoResponse(BaseModel):
     requiere_folio_unico: bool
     requiere_receptor: bool
     plantilla_pdf: str | None = None
+    estado: str
+    fecha_creacion: datetime
+    fecha_actualizacion: datetime
+
+
+# ============================================================
+# PARÁMETROS DEL SISTEMA (PK natural: clave)
+# ============================================================
+
+
+class ParametroCreate(BaseModel):
+    clave: str = Field(min_length=1, max_length=100)
+    valor: str
+    tipo: TipoParametro
+    descripcion: str | None = None
+    editable: bool = True
+
+
+class ParametroUpdate(BaseModel):
+    """Actualización parcial (clave y tipo inmutables)."""
+
+    valor: str | None = None
+    descripcion: str | None = None
+
+
+class ParametroResponse(BaseModel):
+    clave: str
+    valor: str
+    tipo: str
+    descripcion: str | None = None
+    editable: bool
+    actualizada_por: uuid.UUID | None = None
+    fecha_actualizacion: datetime
+
+
+# ============================================================
+# TASAS DE IMPUESTO
+# ============================================================
+
+EstadoTasaImpuesto = Literal["ACTIVA", "INACTIVA"]
+
+
+class TasaImpuestoCreate(BaseModel):
+    codigo: str = Field(min_length=2, max_length=20)
+    nombre: str = Field(min_length=1, max_length=50)
+    valor: Decimal = Field(ge=0, le=100, description="Porcentaje (0–100), p. ej. 19.00.")
+    es_default: bool = False
+    vigencia_desde: date = Field(default_factory=date.today)
+    vigencia_hasta: date | None = None
+    estado: EstadoTasaImpuesto = "ACTIVA"
+
+
+class TasaImpuestoUpdate(BaseModel):
+    """Actualización parcial (estado vía PATCH /tasas-impuesto/{id}/estado).
+
+    `vigencia_hasta` con `null` = sin cambio; para quitar el cierre use
+    `cerrar_vigencia=false` y para cerrar hoy use `cerrar_vigencia=true`
+    (no se pueden combinar con `vigencia_hasta` explícito).
+    """
+
+    nombre: str | None = Field(default=None, min_length=1, max_length=50)
+    valor: Decimal | None = Field(default=None, ge=0, le=100)
+    es_default: bool | None = None
+    vigencia_desde: date | None = None
+    vigencia_hasta: date | None = None
+    cerrar_vigencia: bool | None = None
+
+
+class TasaImpuestoEstadoUpdate(BaseModel):
+    estado: EstadoTasaImpuesto
+
+
+class TasaImpuestoResponse(BaseModel):
+    id: uuid.UUID
+    codigo: str
+    nombre: str
+    valor: Decimal
+    es_default: bool
+    vigencia_desde: date
+    vigencia_hasta: date | None = None
     estado: str
     fecha_creacion: datetime
     fecha_actualizacion: datetime
