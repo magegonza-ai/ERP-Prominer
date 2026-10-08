@@ -69,7 +69,10 @@ services:
     image: agas-api:local
     container_name: agas_api
     env_file:
-      - ./backend/.env
+      # Opcional: .env está en .gitignore; sin él (CI, arranque limpio)
+      # compose debe seguir pudiendo validar/renderizar la configuración.
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432

@@ -16,9 +16,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
           cache: pip
@@ -66,9 +66,9 @@ jobs:
       MINIO_ACCESS_KEY: test-access-key
       MINIO_SECRET_KEY: test-secret-key-123
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
           cache: pip
@@ -86,13 +86,21 @@ jobs:
     name: Docker (compose + build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validar docker-compose (dev)
-        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
+        run: |
+          if ! OUT=$(docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet 2>&1); then
+            echo "::error::docker compose config (dev) falló: $OUT"
+            exit 1
+          fi
 
       - name: Validar docker-compose (prod)
-        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+        run: |
+          if ! OUT=$(docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet 2>&1); then
+            echo "::error::docker compose config (prod) falló: $OUT"
+            exit 1
+          fi
 
       - name: Build imagen del backend
         run: docker build -t agas-cilindros-api:ci backend
