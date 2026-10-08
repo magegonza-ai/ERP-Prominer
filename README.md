@@ -138,10 +138,12 @@ cd backend
 
 ## Hitos
 
-- [ ] **ETAPA 1 — Arquitectura y Base de Datos** *(en ejecución)*: análisis aprobado (Pasos 1–21),
+- [x] **ETAPA 1 — Arquitectura y Base de Datos** *(completada)*: análisis aprobado (Pasos 1–21),
       44 tablas y migración validada, core de seguridad/permisos/auditoría, API v1 con health,
-      scripts seed/superadmin, lint limpio.
-- [ ] **ETAPA 2 — Autenticación y seguridad** (pendiente)
+      scripts seed/superadmin, lint limpio, suite de tests con CI (GitHub Actions) en verde.
+- [ ] **ETAPA 2 — Autenticación y seguridad** *(en ejecución)*: `POST /auth/login` (bcrypt + 2FA
+      TOTP + bloqueo por intentos), `POST /auth/refresh` (rotación con revocación por reuso),
+      `GET /auth/me` (usuario + permisos RBAC), dependencias `get_current_user`/`RequirePermission`.
 - [ ] **ETAPAS 3–12** (pendientes)
 
 ## Decisiones

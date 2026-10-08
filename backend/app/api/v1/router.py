@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.health import router as health_router
 
 api_router = APIRouter()
@@ -26,7 +27,9 @@ api_router.include_router(health_router)
 # MÓDULOS (se habilitan por etapa)
 # ============================================================
 # Etapa 2 - Autenticación y seguridad:
-#   auth, usuarios, empleados, tareas, permisos, sesiones, audit_log
+#   auth (login/refresh/me) — el resto se habilita por subetapas:
+#   usuarios, empleados, tareas, permisos, sesiones, audit_log
+api_router.include_router(auth_router, prefix="/auth")
 
 # Etapa 3 - Maestros:
 #   clientes, propietarios, categorias, parametros

@@ -80,3 +80,50 @@ def jwt_keypair(tmp_path_factory):
     settings.JWT_PRIVATE_KEY_PATH, settings.JWT_PUBLIC_KEY_PATH = saved
     security_module._private_key_cache = None
     security_module._public_key_cache = None
+
+
+# ============================================================
+# FIXTURES DE BASE DE PRUEBAS (compartidos: test_database, test_auth, ...)
+# ============================================================
+
+
+@pytest.fixture
+async def db_engine():
+    """Engine aislado contra la BD de pruebas + esquema completo (idempotente)."""
+    from sqlalchemy import text
+
+    from app.database import create_engine
+    from app.models import Base
+
+    engine = create_engine()
+    try:
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        except Exception:
+            await engine.dispose()
+            if os.environ.get("TESTS_REQUIRE_DB") == "1":
+                # En CI la BD debe estar: un skip silencioso sería un falso verde.
+                pytest.fail(
+                    "Base de datos no disponible con TESTS_REQUIRE_DB=1: "
+                    "los tests de BD no pueden omitirse en CI"
+                )
+            pytest.skip("Base de datos de pruebas no disponible (agas_cilindros_test)")
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        await engine.dispose()
+        raise
+
+    yield engine
+
+    await engine.dispose()
+
+
+@pytest.fixture
+def session_factory(db_engine):
+    """Session factory sobre el engine de pruebas del test actual."""
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    return async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)

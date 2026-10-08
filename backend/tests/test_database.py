@@ -8,52 +8,11 @@ pruebas no está disponible, estos tests se omiten (skip); ver conftest.py.
 
 from __future__ import annotations
 
-import os
-
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture
-async def db_engine():
-    """Engine aislado contra la BD de pruebas + esquema completo (idempotente)."""
-    from app.database import create_engine
-    from app.models import Base
-
-    engine = create_engine()
-    try:
-        try:
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-        except Exception:
-            await engine.dispose()
-            if os.environ.get("TESTS_REQUIRE_DB") == "1":
-                # En CI la BD debe estar: un skip silencioso sería un falso verde.
-                pytest.fail(
-                    "Base de datos no disponible con TESTS_REQUIRE_DB=1: "
-                    "los tests de BD no pueden omitirse en CI"
-                )
-            pytest.skip("Base de datos de pruebas no disponible (agas_cilindros_test)")
-
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    except Exception:
-        await engine.dispose()
-        raise
-
-    yield engine
-
-    await engine.dispose()
-
-
-@pytest.fixture
-def session_factory(db_engine):
-    """Session factory sobre el engine de pruebas del test actual."""
-    return async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
 
 
 async def test_esquema_completo_creado(db_engine) -> None:

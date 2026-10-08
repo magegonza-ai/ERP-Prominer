@@ -93,6 +93,7 @@ def create_access_token(
 
     payload = {
         "sub": str(user_id),
+        "jti": str(uuid.uuid4()),  # id único: dos tokens emitidos en el mismo segundo nunca son idénticos
         "username": username,
         "empleado_id": str(empleado_id) if empleado_id else None,
         "type": "access",
@@ -123,6 +124,7 @@ def create_refresh_token(
 
     payload = {
         "sub": str(user_id),
+        "jti": str(uuid.uuid4()),  # id único: la rotación siempre invalida materialmente el token anterior
         "session_id": str(session_id),
         "type": "refresh",
         "iat": now,
