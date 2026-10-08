@@ -11,7 +11,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
 - **Análisis completo (Pasos 1–21)**: documento de análisis aprobado que define módulos, tablas,
   reglas de negocio, casos de prueba y etapas (documento de referencia en la conversación del proyecto).
 - **Registro de decisiones de implementación**: [`docs/decisiones.md`](docs/decisiones.md).
-- **ETAPA 1 (Arquitectura y Base de Datos)**: completada y aprobada (ver hitos).
+- **Etapas 1 y 2** (Arquitectura y Base de Datos; Autenticación y seguridad): completadas y
+  aprobadas (ver hitos). ETAPA 3 en curso.
 
 ## Stack
 
@@ -148,7 +149,13 @@ cd backend
       **empleados** (con asignación de tareas), **tareas** y **permisos** (matriz `tarea_permiso`),
       **sesiones** (listado/revocación) y **auditoría** (solo lectura con filtros), todo bajo la
       matriz RBAC dominio×acción (TAREA_28/29/30) — 126 tests, cobertura 95%, E2E dev 39/39.
-- [ ] **ETAPAS 3–12** (pendientes)
+- [ ] **ETAPA 3 — Datos maestros** *(subetapa 3.1 entregada, pendiente de aprobación)*: catálogos
+      simples `/areas`, `/categorias` (jerárquica con anti-ciclos), `/tipos-gas`, `/formas-pago` y
+      `/tipos-documento` (CRUD con guard TAREA_29, `codigo` único e inmutable, estados por
+      `Literal`, `DELETE` solo sin referencias → 409) — 176 tests, cobertura 96%, E2E dev 32/32,
+      migración `0003_drift_fix` que alinea modelo↔BD (`alembic check` limpio).
+      *Subetapa 3.2 (pendiente): parámetros del sistema y tasas de impuesto.*
+- [ ] **ETAPAS 4–12** (pendientes)
 
 ## Decisiones
 

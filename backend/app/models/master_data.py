@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import List
 
 from sqlalchemy import (
@@ -17,6 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -142,7 +144,7 @@ class TasaImpuesto(BaseModel):
 
     codigo: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     nombre: Mapped[str] = mapped_column(String(50), nullable=False)
-    valor: Mapped[float] = mapped_column(nullable=False)  # 19.00, 0.00
+    valor: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)  # 19.00, 0.00
     es_default: Mapped[bool] = mapped_column(Boolean, default=False)
     vigencia_desde: Mapped[date] = mapped_column(Date, default=date.today, nullable=False)
     vigencia_hasta: Mapped[date | None] = mapped_column(Date)
