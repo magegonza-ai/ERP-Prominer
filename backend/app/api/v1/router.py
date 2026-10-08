@@ -17,11 +17,13 @@ from app.api.v1.endpoints.areas import router as areas_router
 from app.api.v1.endpoints.auditoria import router as auditoria_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.categorias import router as categorias_router
+from app.api.v1.endpoints.clientes import router as clientes_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.endpoints.parametros import router as parametros_router
 from app.api.v1.endpoints.permisos import router as permisos_router
+from app.api.v1.endpoints.propietarios import router as propietarios_router
 from app.api.v1.endpoints.sesiones import router as sesiones_router
 from app.api.v1.endpoints.tareas import router as tareas_router
 from app.api.v1.endpoints.tasas_impuesto import router as tasas_impuesto_router
@@ -61,10 +63,13 @@ api_router.include_router(tipos_documento_router, prefix="/tipos-documento")
 api_router.include_router(parametros_router, prefix="/parametros")
 api_router.include_router(tasas_impuesto_router, prefix="/tasas-impuesto")
 
-# Etapa 3 (cont.) - Maestros:
-#   clientes, propietarios
+# Etapa 4 - Inventario de cilindros (subetapa 4.1: maestros restantes):
+#   clientes (con receptores autorizados anidados) y propietarios —
+#   dominios RBAC TAREA_01 y TAREA_02.
+api_router.include_router(clientes_router, prefix="/clientes")
+api_router.include_router(propietarios_router, prefix="/propietarios")
 
-# Etapa 4 - Inventario de cilindros:
+# Etapa 4 (cont.) - subetapa 4.2:
 #   cilindros, ubicaciones, movimientos
 
 # Etapa 5 - Operaciones:

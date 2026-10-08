@@ -8,7 +8,8 @@ Uso:
 
 Si no se proporciona contraseña, se genera una aleatoria y se muestra en pantalla.
 El usuario nace con estado ACTIVO, requiere_cambio_password=True y con las
-tareas de dominio RBAC (TAREA_28/29/30) asignadas a su empleado; si los
+tareas de dominio RBAC (TAREA_28/29/30 + TAREA_01/02 de maestros) asignadas
+a su empleado; si los
 catálogos aún no existen se avisa (requiere scripts/seed_data.py).
 """
 
@@ -30,8 +31,9 @@ from app.database import async_session_factory, close_db, init_db
 from app.models import Area, Empleado, EmpleadoTarea, Tarea, Usuario
 
 # Tareas de dominio del RBAC (scripts/seed_data.py): sin ellas el superadmin
-# recibiría 403 en todos los módulos de la API.
-TAREAS_SUPERADMIN = ("TAREA_28", "TAREA_29", "TAREA_30")
+# recibiría 403 en todos los módulos de la API. TAREA_01/02 cubren los
+# maestros de la ETAPA 4.1 (clientes, receptores y propietarios).
+TAREAS_SUPERADMIN = ("TAREA_01", "TAREA_02", "TAREA_28", "TAREA_29", "TAREA_30")
 
 
 async def asegurar_tareas_superadmin(session, usuario: Usuario) -> None:
