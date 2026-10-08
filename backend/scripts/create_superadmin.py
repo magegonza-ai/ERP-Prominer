@@ -7,7 +7,9 @@ Uso:
         --password "MiClave123!" --rut "12.345.678-9"
 
 Si no se proporciona contraseña, se genera una aleatoria y se muestra en pantalla.
-El usuario nace con estado ACTIVO y requiere_cambio_password=True.
+El usuario nace con estado ACTIVO, requiere_cambio_password=True y con las
+tareas de dominio RBAC (TAREA_28/29/30) asignadas a su empleado; si los
+catálogos aún no existen se avisa (requiere scripts/seed_data.py).
 """
 
 from __future__ import annotations
@@ -25,7 +27,52 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.database import async_session_factory, close_db, init_db
-from app.models import Area, Empleado, Usuario
+from app.models import Area, Empleado, EmpleadoTarea, Tarea, Usuario
+
+# Tareas de dominio del RBAC (scripts/seed_data.py): sin ellas el superadmin
+# recibiría 403 en todos los módulos de la API.
+TAREAS_SUPERADMIN = ("TAREA_28", "TAREA_29", "TAREA_30")
+
+
+async def asegurar_tareas_superadmin(session, usuario: Usuario) -> None:
+    """Asigna (o reactiva) las tareas de dominio del superadmin.
+
+    Idempotente: si la fila ya existe y está VIGENTE solo lo informa. Si los
+    catálogos no están sembrados aún, avisa en lugar de fallar.
+    """
+    if usuario.empleado_id is None:
+        print("  ⚠️  Sin empleado vinculado: no se pueden asignar tareas RBAC")
+        return
+    for codigo in TAREAS_SUPERADMIN:
+        tarea = (
+            await session.execute(select(Tarea).where(Tarea.codigo == codigo))
+        ).scalar_one_or_none()
+        if tarea is None:
+            print(f"  ⚠️  {codigo} no existe (ejecute scripts/seed_data.py primero)")
+            continue
+        fila = (
+            await session.execute(
+                select(EmpleadoTarea).where(
+                    EmpleadoTarea.empleado_id == usuario.empleado_id,
+                    EmpleadoTarea.tarea_id == tarea.id,
+                )
+            )
+        ).scalars().first()
+        if fila is None:
+            session.add(
+                EmpleadoTarea(
+                    empleado_id=usuario.empleado_id,
+                    tarea_id=tarea.id,
+                    usuario_asigno_id=usuario.id,
+                )
+            )
+            print(f"  ✓ Tarea asignada: {codigo}")
+        elif fila.estado != "VIGENTE":
+            fila.estado = "VIGENTE"
+            fila.fecha_termino = None
+            print(f"  ✓ Tarea reactivada: {codigo}")
+        else:
+            print(f"  ✓ Tarea ya vigente: {codigo}")
 
 
 def generate_password(length: int = 16) -> str:
@@ -64,8 +111,12 @@ async def create_superadmin(
     async with async_session_factory() as session:
         # Verificar si ya existe un superadmin
         existing = await session.execute(select(Usuario).where(Usuario.username == username))
-        if existing.scalar_one_or_none():
-            print(f"⚠️  El usuario '{username}' ya existe. No se crea nada.")
+        existente = existing.scalar_one_or_none()
+        if existente:
+            print(f"⚠️  El usuario '{username}' ya existe. No se crea nada,")
+            print("    pero se asegura que tenga sus tareas RBAC:")
+            await asegurar_tareas_superadmin(session, existente)
+            await session.commit()
             return
 
         # Verificar si ya existe un admin activo
@@ -121,6 +172,9 @@ async def create_superadmin(
         session.add(usuario)
         await session.flush()
         print(f"  ✓ Usuario creado: {username}")
+
+        # RBAC: el superadmin nace con los tres dominios asignados.
+        await asegurar_tareas_superadmin(session, usuario)
 
         await session.commit()
 

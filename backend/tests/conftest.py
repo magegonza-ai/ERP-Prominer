@@ -82,6 +82,16 @@ def jwt_keypair(tmp_path_factory):
     security_module._public_key_cache = None
 
 
+@pytest.fixture(autouse=True)
+def _hash_rapido(monkeypatch):
+    """Bcrypt con rondas mínimas en TODA la suite: la lógica es la misma
+    (verificación idéntica) y la suite queda veloz. Aplica también a las
+    fábricas de tests/factories.py."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "PASSWORD_HASH_ROUNDS", 4)
+
+
 # ============================================================
 # FIXTURES DE BASE DE PRUEBAS (compartidos: test_database, test_auth, ...)
 # ============================================================

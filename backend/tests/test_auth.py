@@ -48,12 +48,6 @@ pytestmark = pytest.mark.asyncio
 CLAVE = "Admin2026!"  # política: mayúscula, minúscula, dígito y especial
 
 
-@pytest.fixture(autouse=True)
-def _hash_rapido(monkeypatch):
-    """Bcrypt con rondas mínimas: la lógica es la misma, la suite más veloz."""
-    monkeypatch.setattr(settings, "PASSWORD_HASH_ROUNDS", 4)
-
-
 # ============================================================
 # HELPERS
 # ============================================================
