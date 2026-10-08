@@ -8,6 +8,8 @@ pruebas no está disponible, estos tests se omiten (skip); ver conftest.py.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +31,12 @@ async def db_engine():
                 await conn.execute(text("SELECT 1"))
         except Exception:
             await engine.dispose()
+            if os.environ.get("TESTS_REQUIRE_DB") == "1":
+                # En CI la BD debe estar: un skip silencioso sería un falso verde.
+                pytest.fail(
+                    "Base de datos no disponible con TESTS_REQUIRE_DB=1: "
+                    "los tests de BD no pueden omitirse en CI"
+                )
             pytest.skip("Base de datos de pruebas no disponible (agas_cilindros_test)")
 
         async with engine.begin() as conn:

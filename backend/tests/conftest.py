@@ -7,7 +7,8 @@ y exige valores como SECRET_KEY, DATABASE_PASSWORD y las llaves de MinIO.
 
 Convención: los tests de BD usan la base `agas_cilindros_test` (aislada de la
 base de desarrollo). Si la BD de prueba no está disponible, esos tests se
-omiten (skip) en lugar de fallar.
+omiten (skip) en lugar de fallar; en CI se fija `TESTS_REQUIRE_DB=1` para que
+la indisponibilidad sea un fallo explícito y nunca un "falso verde".
 """
 
 from __future__ import annotations

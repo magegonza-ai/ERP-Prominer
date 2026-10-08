@@ -57,6 +57,9 @@ jobs:
       # todos los valores requeridos por app.config.Settings se declaran aquí
       # y en tests/conftest.py.
       ENVIRONMENT: test
+      # Sin la BD disponible los tests de BD deben FALLAR, no hacer skip
+      # (evita un "falso verde" del pipeline).
+      TESTS_REQUIRE_DB: "1"
       SECRET_KEY: "test-secret-key-ci-xxxxxxxxxxxxxxxxxxxx"
       DATABASE_HOST: localhost
       DATABASE_PORT: "5432"
@@ -77,7 +80,9 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Pytest con cobertura
-        run: pytest --cov=app --cov-report=term-missing
+        run: |
+          pytest --cov=app --cov-report=term-missing | tee pytest-out.txt
+          echo "::notice::$(grep -E '[0-9]+ (passed|failed)' pytest-out.txt | tail -n 1 | sed 's/=//g; s/^ *//; s/ *$//')"
 
   # ============================================================
   # DOCKER (validar compose + build de la imagen)
