@@ -1,0 +1,106 @@
+# ==============================================================
+# AGAS Cilindros - Docker Compose BASE
+# Servicios compartidos por todos los entornos.
+#
+# Uso:
+#   docker compose up -d                       # base (desarrollo)
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ==============================================================
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: agas_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agas_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agas_dev_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-agas_cilindros}
+      TZ: America/Santiago
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agas_user} -d ${POSTGRES_DB:-agas_cilindros}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: agas_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: agas_minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Consola
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: agas-api:local
+    container_name: agas_api
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      REDIS_HOST: redis
+      MINIO_ENDPOINT: minio:9000
+      JWT_PRIVATE_KEY_PATH: /app/secrets/jwt_private.pem
+      JWT_PUBLIC_KEY_PATH: /app/secrets/jwt_public.pem
+    volumes:
+      - ./backend/secrets:/app/secrets:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

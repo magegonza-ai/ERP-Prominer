@@ -1,0 +1,20 @@
+# ==============================================================
+# AGAS Cilindros - Override de DESARROLLO
+# Monta el código del backend en caliente (uvicorn --reload).
+# ==============================================================
+
+services:
+  api:
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
+      - ./backend/scripts:/app/scripts:ro
+      - ./backend/secrets:/app/secrets:ro
+    command:
+      - sh
+      - -c
+      - "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO

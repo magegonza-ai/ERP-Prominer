@@ -38,10 +38,16 @@ ERP-Prominer/
 │   │   ├── config.py       # Settings (Pydantic)
 │   │   ├── database.py     # Engine async + session factory
 │   │   └── main.py         # Aplicación FastAPI
-│   ├── scripts/            # seed_data.py, create_superadmin.py
+│   ├── scripts/            # seed_data, create_superadmin, generar_llaves_jwt
 │   ├── requirements/       # base / dev / prod
+│   ├── Dockerfile          # Imagen multi-etapa (python:3.14-slim)
 │   ├── .env.example        # Plantilla de configuración
 │   └── pyproject.toml      # Lint (ruff), tipado (mypy), pytest
+├── deploy/
+│   └── nginx/              # Reverse proxy de producción
+├── docker-compose.yml      # Postgres 16 + Redis + MinIO + API
+├── docker-compose.dev.yml  # Override desarrollo (reload)
+├── docker-compose.prod.yml # Override producción (+ nginx)
 ├── docs/                   # Documentación del proyecto (anexo decisiones)
 └── .gitignore
 ```
@@ -50,6 +56,7 @@ ERP-Prominer/
 
 - Python 3.14 (`py -0` para comprobar; usar `py -3.14` si hay varias versiones)
 - PostgreSQL 16 (local o vía Docker)
+- Docker + Docker Compose v2 (**recomendado**, para levantar el stack completo)
 - (Futuro) Node.js 20+ para frontend
 
 ## Configuración local (backend)
@@ -72,10 +79,52 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m scripts.seed_data
 .\.venv\Scripts\python.exe -m scripts.create_superadmin
 
+# Llaves JWT (RS256) - solo la primera vez
+.\.venv\Scripts\python.exe -m scripts.generar_llaves_jwt
+
 # Ejecutar API (desarrollo)
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 # Swagger: http://localhost:8000/docs
 ```
+
+## Ejecución con Docker
+
+Requiere **Docker (con Docker Compose v2)**. Levanta PostgreSQL 16, Redis, MinIO y la API.
+
+```powershell
+# 1) Llaves JWT (primera vez)
+cd backend
+.\scripts\generar_llaves_jwt.ps1       # o: .\.venv\Scripts\python.exe -m scripts.generar_llaves_jwt
+
+# 2) Levantar el stack base (desarrollo)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+# Servicios expuestos
+#   API      → http://localhost:8000   (Swagger /docs en DEBUG)
+#   Postgres → localhost:5432          (agas_user / agas_cilindros)
+#   Redis    → localhost:6379
+#   MinIO    → http://localhost:9001   (consola: minioadmin / minioadmin123)
+
+# Logs y estado
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml ps
+
+# Detener
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+```
+
+Cambios en `backend/app` se reflejan en caliente (`uvicorn --reload`).
+
+### Producción
+
+```powershell
+# Requiere definir MINIO_ROOT_USER y MINIO_ROOT_PASSWORD en el entorno
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# nginx publica en http://localhost (proxy hacia la API)
+```
+
+Las llaves JWT de producción se montan como volumen docker `jwt_secrets` (copiar
+los `.pem` generados a mano o vía secreto del orquestador).
 
 ## Validación (herramientas)
 
