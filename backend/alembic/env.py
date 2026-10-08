@@ -21,6 +21,13 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.config import settings
 from app.models import Base
 
+# Política de autogenerate (ver docs/decisiones.md D22):
+# Los server_default de las migraciones (gen_random_uuid, now(), 'ACTIVA',
+# ...) son autoridad y los modelos expresan sus defaults en Python.
+# compare_server_default=False evita que un autogenerate proponga "borrar"
+# esos defaults de la BD; compare_type=True sí detecta cambios de tipo.
+compare_server_default = False
+
 # this is the Alembic Config object
 config = context.config
 
@@ -44,7 +51,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
-        compare_server_default=True,
+        compare_server_default=compare_server_default,
     )
 
     with context.begin_transaction():
@@ -56,7 +63,7 @@ def do_run_migrations(connection: Connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         compare_type=True,
-        compare_server_default=True,
+        compare_server_default=compare_server_default,
         include_schemas=True,
     )
 

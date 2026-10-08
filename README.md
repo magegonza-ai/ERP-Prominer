@@ -101,7 +101,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 # Servicios expuestos
 #   API      → http://localhost:8000   (Swagger /docs en DEBUG)
-#   Postgres → localhost:5432          (agas_user / agas_cilindros)
+#   Postgres → localhost:5433         (agas_user / agas_cilindros)
 #   Redis    → localhost:6379
 #   SeaweedFS → http://localhost:9000  (API S3; interfaz: http://localhost:8888)
 

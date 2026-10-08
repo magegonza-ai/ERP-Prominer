@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from sqlalchemy import (
     DDL,
@@ -35,6 +35,7 @@ class TimestampMixin:
     fecha_creacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
+        server_default=text("now()"),
         nullable=False,
         comment="Fecha de creación del registro",
     )
@@ -95,6 +96,9 @@ class BaseModel(Base, AuditMixin):
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
+        # Alineado con la migración 0001: permite INSERTs de SQL puro
+        # (p. ej. los triggers de auditoría) sin columna id en el INSERT.
+        server_default=text("gen_random_uuid()"),
         comment="Identificador único (UUID v4)",
     )
 
@@ -109,9 +113,14 @@ class BaseModel(Base, AuditMixin):
 # ============================================================
 
 
-def generate_audit_trigger(table_name: str) -> DDL:
-    """Genera trigger de auditoría para una tabla."""
-    return DDL(f"""
+def generate_audit_trigger(table_name: str) -> List[DDL]:
+    """
+    Genera los DDL de auditoría de una tabla, en sentencias separadas.
+
+    asyncpg ejecuta cada DDL como una sentencia preparada única (sin múltiples
+    comandos), por eso la función, el drop y el trigger van en DDL independientes.
+    """
+    function_ddl = DDL(f"""
         CREATE OR REPLACE FUNCTION audit_{table_name}_trigger()
         RETURNS TRIGGER AS $$
         BEGIN
@@ -170,18 +179,34 @@ def generate_audit_trigger(table_name: str) -> DDL:
             RETURN NULL;
         END;
         $$ LANGUAGE plpgsql SECURITY DEFINER;
+    """)
 
+    return [
+        function_ddl,
+        DDL(f"""
         DROP TRIGGER IF EXISTS audit_{table_name}_trigger ON {table_name};
+    """),
+        DDL(f"""
         CREATE TRIGGER audit_{table_name}_trigger
         AFTER INSERT OR UPDATE OR DELETE ON {table_name}
         FOR EACH ROW EXECUTE FUNCTION audit_{table_name}_trigger();
-    """)
+    """),
+    ]
+
+
+# Tablas con trigger de auditoría registrado (en orden de registro).
+# La usa la migración 0002_audit_triggers para replicar los triggers
+# en bases creadas con Alembic (create_all los crea solo en desarrollo/tests).
+AUDITED_TABLES: List[str] = []
 
 
 def register_audit_trigger(model_class) -> None:
     """Registra trigger de auditoría para un modelo."""
     table_name = model_class.__tablename__
-    event.listen(model_class.__table__, "after_create", generate_audit_trigger(table_name))
+    if table_name not in AUDITED_TABLES:
+        AUDITED_TABLES.append(table_name)
+    for ddl in generate_audit_trigger(table_name):
+        event.listen(model_class.__table__, "after_create", ddl)
 
 
 # ============================================================

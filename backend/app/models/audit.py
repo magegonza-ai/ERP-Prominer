@@ -150,10 +150,16 @@ class Auditoria(Base):
 
     __tablename__ = "auditoria"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        # El trigger INSERTa sin columna id (alineado con la migración 0001).
+        server_default=text("gen_random_uuid()"),
+    )
     usuario_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("usuario.id"))
     fecha_hora: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), server_default=text("now()"), nullable=False
     )
     modulo: Mapped[str] = mapped_column(String(50), nullable=False)
     accion: Mapped[str] = mapped_column(String(30), nullable=False)

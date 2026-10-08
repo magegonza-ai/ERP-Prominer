@@ -170,7 +170,7 @@ def get_token_user_id(token: str) -> uuid.UUID | None:
     try:
         payload = decode_access_token(token)
         return uuid.UUID(payload["sub"])
-    except JWTError, KeyError, ValueError:
+    except (JWTError, KeyError, ValueError):
         return None
 
 

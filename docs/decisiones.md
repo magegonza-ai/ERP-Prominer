@@ -67,3 +67,29 @@ tomadas durante la **implementación** que ajustan o precisan lo definido en el 
 | **Decisión** | Sustituir MinIO por **SeaweedFS** como servidor S3-compatible. Motivos: (1) licencia **Apache-2.0** (sin fricción de licencias en dev/CI); (2) proyecto **activo** con imagen oficial en Docker Hub (`chrislusf/seaweedfs`, validada v4.48); (3) **S3-compatible** → la configuración del backend (`MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET`) permanece sin cambios de código; (4) un solo contenedor y arranque simple (`weed server -s3`). Se descartó Garage (exige archivo de config + pasos de *layout* adicionales) y AIStor (licenciado). |
 | **Detalles técnicos** | El gateway S3 de SeaweedFS escucha en el puerto **8333** interno (el flag `-s3.port` no aplica dentro de `weed server`); el host lo expone como **9000** (`9000:8333`). Interfaz web Filer/Status en **8888**. Servicio compose renombrado a `seaweedfs`; `MINIO_ENDPOINT=seaweedfs:8333` en el API. Volumen `s3data`. En dev se aceptan credenciales arbitrarias (default de SeaweedFS); en **producción** debe montarse un archivo `-s3.config` con usuarios/recurso S3 reales (pendiente cuando se construyan los módulos de adjuntos). |
 | **Impacto** | Infraestructura: sustituye la imagen MinIO. Código backend: ninguno (config S3 genérica). Documentación y compose actualizados. |
+
+---
+
+## D21 — Puerto 5433 para PostgreSQL desde el host
+
+| Campo | Descripción |
+|-------|-------------|
+| **Estado** | ✅ Aplicada y validada (2026-10-08) |
+| **Fecha** | 2026-10-08 |
+| **Contexto** | En la máquina de desarrollo existe un **PostgreSQL 18 local** (servicio Windows `postgresql-x64-18`) escuchando en `0.0.0.0:5432`, en paralelo con `com.docker.backend` que publica el puerto 5432 del contenedor. Dos listeners en el mismo puerto provocaban que las conexiones desde el host a `localhost:5432` fallaran de forma intermitente con `asyncpg: connection was closed in the middle of operation` (la conexión terminaba en el PostgreSQL local, que no tiene la base/usuario del proyecto). Esto impedía ejecutar los tests y scripts locales contra la base de desarrollo. |
+| **Decisión** | Publicar el Postgres del proyecto en el **puerto 5433** del host (`5433:5432` en `docker-compose.yml`), conservando el 5432 **interno** (la API sigue conectándose a `postgres:5432` en la red Docker). `backend/.env` y `backend/.env.example` pasan a `DATABASE_PORT=5433` (solo aplica a procesos del host: tests y scripts locales). README actualizado. |
+| **Alternativas descartadas** | (1) Detener el servicio `postgresql-x64-18` local: invasivo, puede pertenecer a otros proyectos. (2) Cambiar el puerto interno del contenedor: rompería la configuración de la red Docker y de producción sin necesidad. |
+| **Impacto** | `docker-compose.yml` (mapeo host), `.env`/`.env.example`, README. Producción no se ve afectada (`docker-compose.prod.yml` no publica puerto de PostgreSQL). |
+
+---
+
+## D22 — Triggers de auditoría en bases migradas y política de `server_default`
+
+| Campo | Descripción |
+|-------|-------------|
+| **Estado** | ✅ Aplicada y validada (2026-10-08) |
+| **Fecha** | 2026-10-08 |
+| **Contexto** | La primera suite de tests (pytest + PostgreSQL real) reveló tres defectos que la validación estática (`alembic --sql`, importación de mappers) no podía detectar: **(1)** `0001_initial` creaba las tablas pero **no los triggers de auditoría** → una base migrada tenía **0 triggers** (vs. 36 creados por `create_all`), es decir, **sin trazabilidad de auditoría**; **(2)** `create_all` no aplicaba `server_default` en `auditoria.id` → el trigger fallaba con `NOT NULL violation` al registrar el INSERT; **(3)** `env.py` usaba `compare_server_default=True` mientras los `server_default` existían solo en la migración → un futuro `alembic revision --autogenerate` propondría **borrar** todos los defaults de la BD. |
+| **Decisión** | **(a)** Alinear el modelo con la migración: `server_default=gen_random_uuid()` en `BaseModel.id` y `Auditoria.id`, `server_default=now()` en `TimestampMixin.fecha_creacion` y `Auditoria.fecha_hora` (los defaults uniformes; los defaults puntuales por tabla —`estado`, escalares— se mantienen exclusivamente en las migraciones). **(b)** Nueva migración **`0002_audit_triggers`** que crea las 36 funciones + triggers a partir de `app.models.base.generate_audit_trigger` (misma fuente que usa `create_all`), una sentencia por `op.execute` (asyncpg/psycopg no aceptan múltiples comandos en una sentencia preparada). **(c)** `base.py` expone `AUDITED_TABLES` (registro único de tablas auditadas, usado por la migración). **(d)** `env.py`: `compare_server_default=False` — la autoridad de los defaults de BD son las migraciones; los modelos expresan defaults en Python. |
+| **Validación** | `alembic upgrade head` en BD dev → 36 triggers + `alembic_version=0002_audit_triggers`; tests: `test_triggers_de_auditoria_creados` y `test_trigger_auditoria_registra_insert_y_delete` (INSERT/DELETE auditados end-to-end) ✅. |
+| **Impacto** | Modelos (`base.py`, `audit.py`), migración 0002, `env.py`, tests. Cubre todo entorno desplegado con Alembic (dev, CI, producción). |
