@@ -63,7 +63,7 @@ async_session_factory = async_sessionmaker(
 # ============================================================
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     Dependency para FastAPI que provee una sesión de BD por request.
     Maneja commit/rollback automático y cierre de sesión.
@@ -79,7 +79,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-async def get_db_readonly() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_readonly() -> AsyncGenerator[AsyncSession]:
     """Sesión de solo lectura para consultas que no modifican datos."""
     async with async_session_factory() as session:
         try:

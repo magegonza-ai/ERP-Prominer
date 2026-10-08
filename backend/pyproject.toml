@@ -7,7 +7,7 @@ name = "agas-cilindros-backend"
 version = "1.0.0"
 description = "Sistema Web de Gestión, Valorización y Trazabilidad de Cilindros de Gas para AGAS"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
@@ -58,7 +58,7 @@ prod = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "T20", "PIE", "PT", "Q", "ARG", "PTH", "ERA", "PL", "TRY", "NPY", "RSE", "RET", "SLF", "TID", "TCH", "EXE", "ISC", "ICN", "LOG", "PERF", "PYI", "TD", "ANN"]
@@ -73,7 +73,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
