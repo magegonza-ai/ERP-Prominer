@@ -14,7 +14,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
 - **Etapas 1, 2 y 3** (Arquitectura y Base de Datos; Autenticación y seguridad; Datos
   maestros) y **ETAPA 4** (clientes, propietarios e inventario de cilindros): completadas y
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros) y
-  **5.2** (inspección de cilindros) aprobadas.
+  **5.2** (inspección de cilindros) aprobadas, y **5.3.a** (órdenes de trabajo: cabecera, detalles
+  y ciclo de vida) entregada, pendiente de aprobación.
 
 ## Stack
 
@@ -173,7 +174,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 y 5.2 aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 y 5.2 aprobadas; 5.3.a entregada, pendiente de aprobación)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -189,8 +190,18 @@ cd backend
       resultado al estado del cilindro (`APTO_LLENADO`→`APTO_LLENADO`, `REQUIERE_REPARACION`
       →`APTO_REPARACION`, `REQUIERE_INSPECCION_TECNICA`→`PENDIENTE_INSPECCION`,
       `RECHAZADO`→`RECHAZADO`, `FUERA_SERVICIO`→`FUERA_SERVICIO`) — 312 tests, cobertura
-      97%, E2E dev 44/44, decisión D33.
-- [ ] **ETAPAS 5.3–12** (pendientes)
+      97%, E2E dev 44/44, decisión D33; **5.3.a** `/ordenes-trabajo` (colección única de
+      llenado/reparación con RBAC **condicionado por `tipo`**, decisión D32): numeración
+      del servidor `OTL`/`OTR-<AÑO>-######`, alta **atómica** con cilindros `inline` (≥ 1;
+      repetido → 409; elegible `APTO_LLENADO`/`APTO_REPARACION` → si no, 400), ciclo
+      `PENDIENTE → EN_PROCESO → FINALIZADA → PENDIENTE_CALIDAD` (+`CANCELADA` desde
+      `PENDIENTE`) donde cada transición emite un `Movimiento` **atómico** por cilindro
+      (`EN_PROCESO_LLENADO`/`EN_REPARACION` → `FINALIZADO_LLENADO`/`REPARADO` →
+      `PENDIENTE_CONTROL_CALIDAD`), transición inválida o misma → 409 `allowed_states`,
+      sub-recurso de detalles con resultados de ejecución (solo `EN_PROCESO`/`FINALIZADA`)
+      y sin `DELETE` de cabecera (405) — 340 tests, cobertura 97%, E2E dev 57/57; queda
+      **5.3.b** (tareas asignadas, D34) pendiente.
+- [ ] **ETAPAS 5.3.b–12** (pendientes)
 
 ## Decisiones
 
