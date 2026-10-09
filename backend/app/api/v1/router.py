@@ -22,6 +22,7 @@ from app.api.v1.endpoints.clientes import router as clientes_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.inspecciones import router as inspecciones_router
 from app.api.v1.endpoints.movimientos import router as movimientos_router
 from app.api.v1.endpoints.parametros import router as parametros_router
 from app.api.v1.endpoints.permisos import router as permisos_router
@@ -80,12 +81,14 @@ api_router.include_router(ubicaciones_router, prefix="/ubicaciones")
 api_router.include_router(cilindros_router, prefix="/cilindros")
 api_router.include_router(movimientos_router, prefix="/movimientos")
 
-# Etapa 5 - Operaciones (subetapa 5.1: recepción de cilindros):
-#   /recepciones (TAREA_04) con detalles anidados; cada cilindro recibido
-#   emite un movimiento (el estado del cilindro solo cambia vía Movimiento).
-#   Pendientes: inspecciones, órdenes_llenado, ordenes_reparacion y
-#   control_calidad.
+# Etapa 5 - Operaciones (subetapas 5.1 y 5.2):
+#   5.1 /recepciones (TAREA_04) con detalles anidados; cada cilindro
+#   recibido emite un movimiento (el estado del cilindro solo cambia vía
+#   Movimiento). 5.2 /inspecciones (TAREA_05), append-only: cada inspección
+#   emite un movimiento que fija el estado del cilindro según su resultado.
+#   Pendientes: órdenes de trabajo (llenado/reparación) y control_calidad.
 api_router.include_router(recepciones_router, prefix="/recepciones")
+api_router.include_router(inspecciones_router, prefix="/inspecciones")
 
 # Etapa 6 - Comercial:
 #   productos, servicios, precios, presupuestos

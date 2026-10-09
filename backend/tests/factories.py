@@ -37,6 +37,7 @@ TAREA_CLIENTES = "TAREA_01"  # registrar clientes (y receptores autorizados)
 TAREA_PROPIETARIOS = "TAREA_02"  # registrar propietarios de cilindros
 TAREA_CILINDROS = "TAREA_03"  # registrar cilindros (inventario)
 TAREA_RECEPCION = "TAREA_04"  # recibir cilindros (operativo)
+TAREA_INSPECCION = "TAREA_05"  # inspeccionar cilindros (calidad)
 TAREA_CAMBIO_UBICACION = "TAREA_15"  # cambiar ubicación (operativo)
 TAREA_MOVIMIENTOS = "TAREA_16"  # registrar movimientos (operativo)
 TAREA_USUARIOS = "TAREA_28"  # administrar usuarios, empleados y sesiones

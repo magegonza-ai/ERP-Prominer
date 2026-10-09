@@ -14,7 +14,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
 - **Etapas 1, 2 y 3** (Arquitectura y Base de Datos; Autenticación y seguridad; Datos
   maestros) y **ETAPA 4** (clientes, propietarios e inventario de cilindros): completadas y
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapa **5.1** (recepción de cilindros)
-  aprobada.
+  aprobada y **5.2** (inspección de cilindros) entregada, pendiente de aprobación.
 
 ## Stack
 
@@ -173,7 +173,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 aprobada)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 aprobada, 5.2 entregada)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -182,8 +182,15 @@ cd backend
       `PENDIENTE_INSPECCION` si `motivo_servicio = INSPECCION`), cilindro repetido en la
       misma recepción → 409 `DUPLICATE_VALUE`, detalle acotado a su recepción → 404 y el
       borrado del detalle no revierte la traza — 291 tests, cobertura 97%, E2E dev 53/53,
-      decisiones D30 y D31.
-- [ ] **ETAPAS 5.2–12** (pendientes)
+      decisiones D30 y D31; **5.2** `/inspecciones` (guard TAREA_05, **append-only**:
+      PATCH/DELETE → 405): checklist opcional y `resultado` validados (`Literal`/`bool` →
+      422), `usuario_id`/`fecha_hora` derivados, `cilindro_id` (404) y `recepcion_id`
+      (vínculo informativo, 404); cada alta emite un `Movimiento` **atómico** que mapea el
+      resultado al estado del cilindro (`APTO_LLENADO`→`APTO_LLENADO`, `REQUIERE_REPARACION`
+      →`APTO_REPARACION`, `REQUIERE_INSPECCION_TECNICA`→`PENDIENTE_INSPECCION`,
+      `RECHAZADO`→`RECHAZADO`, `FUERA_SERVICIO`→`FUERA_SERVICIO`) — 312 tests, cobertura
+      97%, E2E dev 44/44, decisión D33.
+- [ ] **ETAPAS 5.3–12** (pendientes)
 
 ## Decisiones
 
