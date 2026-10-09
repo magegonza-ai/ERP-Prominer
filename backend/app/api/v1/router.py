@@ -19,6 +19,7 @@ from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.categorias import router as categorias_router
 from app.api.v1.endpoints.cilindros import router as cilindros_router
 from app.api.v1.endpoints.clientes import router as clientes_router
+from app.api.v1.endpoints.controles_calidad import router as controles_calidad_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
@@ -89,10 +90,13 @@ api_router.include_router(movimientos_router, prefix="/movimientos")
 #   emite un movimiento que fija el estado del cilindro según su resultado.
 #   5.3 /ordenes-trabajo (RBAC condicionado por `tipo`: llenado TAREA_07/08/09,
 #   reparación TAREA_10/12/13) con cilindros anidados; cada transición emite
-#   movimientos. Pendientes: tareas asignadas (5.3.b) y control_calidad (5.4).
+#   movimientos. 5.4 /controles-calidad (TAREA_14), append-only: cada control
+#   mueve el cilindro según su resultado y cierra la orden cuando todos sus
+#   cilindros están controlados.
 api_router.include_router(recepciones_router, prefix="/recepciones")
 api_router.include_router(inspecciones_router, prefix="/inspecciones")
 api_router.include_router(ordenes_trabajo_router, prefix="/ordenes-trabajo")
+api_router.include_router(controles_calidad_router, prefix="/controles-calidad")
 
 # Etapa 6 - Comercial:
 #   productos, servicios, precios, presupuestos

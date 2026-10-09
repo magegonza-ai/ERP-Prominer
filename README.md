@@ -15,7 +15,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   maestros) y **ETAPA 4** (clientes, propietarios e inventario de cilindros): completadas y
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros),
   **5.2** (inspección de cilindros), **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
-  vida) y **5.3.b** (tareas asignadas de la orden y reasignación) aprobadas.
+  vida) y **5.3.b** (tareas asignadas de la orden y reasignación) aprobadas; **5.4** (control de
+  calidad de cilindros) entregada, pendiente de aprobación.
 
 ## Stack
 
@@ -174,7 +175,8 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a y 5.3.b aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a y 5.3.b aprobadas; 5.4 entregada,
+      pendiente de aprobación)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -208,8 +210,22 @@ cd backend
       con **traza** vía `POST /{tareas}/{id}/reasignar` (`TAREA_28` + `PERM_10`: la original
       pasa a `REASIGNADA` y nace un reemplazo con `reasignada_desde_id`/`usuario_reasigno_id`
       /`motivo`), listado con filtros (`estado`/`responsable_id`/`tarea_id`), `DELETE` → 405 —
-      351 tests, cobertura 97%, E2E dev 52/52, decisión D34.
-- [ ] **ETAPAS 5.4–12** (pendientes)
+      351 tests, cobertura 97%, E2E dev 52/52, decisión D34; **5.4** `/controles-calidad`
+       (guard TAREA_14, **append-only**: PATCH/DELETE → 405): el control se registra sobre un
+       cilindro **de la orden** vinculada (`orden_relacionada_id` obligatoria) cuando la orden
+       está `PENDIENTE_CALIDAD` y el cilindro `PENDIENTE_CONTROL_CALIDAD` (si no → 400); además
+       de PERM_02, `resultado` exige PERM_04 (aprobar) o PERM_05 (rechazar); cada control emite
+       un `Movimiento` **atómico** que mapea el resultado al estado del cilindro
+       (`APROBADO`→`APROBADO` o `LISTO_PARA_ENTREGAR` si `autoriza_entrega`,
+       `APROBADO_OBSERVACIONES`→`APROBADO_OBSERVACIONES`,
+       `REQUIERE_NUEVA_REPARACION`→`APTO_REPARACION`, `RECHAZADO`→`RECHAZADO`,
+       `PENDIENTE_REVISION`→sin cambio, permite re-control); se aplica la **segregación de
+       funciones RN28** (quien ejecutó el trabajo —TAREA_08/12 completada— no puede aprobar su
+       propio control → 403 `SEPARATION_OF_DUTIES`) y la orden **cierra en la misma transacción**
+       cuando todos sus cilindros quedan controlados y ninguno en `PENDIENTE_REVISION`
+       (`RECHAZADA` › `REQUIERE_NUEVA_REPARACION` › `APROBADA`) — 370 tests, cobertura 97%,
+       E2E dev 42/42, decisión D35.
+- [ ] **ETAPAS 5.5–12** (pendientes)
 
 ## Decisiones
 

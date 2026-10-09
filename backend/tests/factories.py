@@ -45,6 +45,7 @@ TAREA_REPARACION_CREAR = "TAREA_10"  # crear órdenes de reparación (operativo)
 TAREA_DIAGNOSTICO = "TAREA_11"  # diagnosticar fallas (operativo)
 TAREA_REPARACION_EJECUTAR = "TAREA_12"  # ejecutar reparaciones (operativo)
 TAREA_REPARACION_CERRAR = "TAREA_13"  # cerrar órdenes de reparación (operativo)
+TAREA_CONTROL_CALIDAD = "TAREA_14"  # realizar control de calidad (operativo)
 TAREA_CAMBIO_UBICACION = "TAREA_15"  # cambiar ubicación (operativo)
 TAREA_MOVIMIENTOS = "TAREA_16"  # registrar movimientos (operativo)
 TAREA_USUARIOS = "TAREA_28"  # administrar usuarios, empleados y sesiones

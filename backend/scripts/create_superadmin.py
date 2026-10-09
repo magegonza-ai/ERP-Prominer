@@ -35,8 +35,9 @@ from app.models import Area, Empleado, EmpleadoTarea, Tarea, Usuario
 # recibiría 403 en todos los módulos de la API. TAREA_01/02 cubren los
 # maestros de la ETAPA 4.1 (clientes, receptores y propietarios), TAREA_03/15/16
 # la ETAPA 4.2 (cilindros, ubicaciones y movimientos), TAREA_04 la ETAPA 5.1
-# (recepción de cilindros), TAREA_05 la ETAPA 5.2 (inspección de cilindros) y
-# TAREA_07/08/09/10/11/12/13 la ETAPA 5.3 (órdenes de llenado y reparación).
+# (recepción de cilindros), TAREA_05 la ETAPA 5.2 (inspección de cilindros),
+# TAREA_07/08/09/10/11/12/13 la ETAPA 5.3 (órdenes de llenado y reparación) y
+# TAREA_14 la ETAPA 5.4 (control de calidad).
 TAREAS_SUPERADMIN = (
     "TAREA_01",
     "TAREA_02",
@@ -50,6 +51,7 @@ TAREAS_SUPERADMIN = (
     "TAREA_11",
     "TAREA_12",
     "TAREA_13",
+    "TAREA_14",
     "TAREA_15",
     "TAREA_16",
     "TAREA_28",
