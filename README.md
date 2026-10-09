@@ -13,8 +13,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
 - **Registro de decisiones de implementación**: [`docs/decisiones.md`](docs/decisiones.md).
 - **Etapas 1, 2 y 3** (Arquitectura y Base de Datos; Autenticación y seguridad; Datos
   maestros) y **ETAPA 4** (clientes, propietarios e inventario de cilindros): completadas y
-  aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapa **5.1** (recepción de cilindros)
-  aprobada y **5.2** (inspección de cilindros) entregada, pendiente de aprobación.
+  aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros) y
+  **5.2** (inspección de cilindros) aprobadas.
 
 ## Stack
 
@@ -173,7 +173,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 aprobada, 5.2 entregada)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1 y 5.2 aprobadas)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
