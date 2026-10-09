@@ -12,7 +12,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   reglas de negocio, casos de prueba y etapas (documento de referencia en la conversación del proyecto).
 - **Registro de decisiones de implementación**: [`docs/decisiones.md`](docs/decisiones.md).
 - **Etapas 1, 2 y 3** (Arquitectura y Base de Datos; Autenticación y seguridad; Datos
-  maestros): completadas y aprobadas (ver hitos). ETAPA 4 en curso (subetapa 4.1 aprobada; 4.2 entregada).
+  maestros): completadas y aprobadas (ver hitos). ETAPA 4 completada y aprobada.
 
 ## Stack
 
@@ -157,8 +157,8 @@ cd backend
       (vigencias con `cerrar_vigencia`, `valor` 0–100, un solo `es_default` global) —
       204 tests, cobertura 96%, E2E dev 32/32 y 28/28, migración `0003_drift_fix` que alinea
       modelo↔BD (`alembic check` limpio) — decisiones D25, D26 y D27.
-- [ ] **ETAPA 4 — Clientes, propietarios e inventario de cilindros** *(4.1 completada y
-      aprobada; 4.2 entregada, pendiente de aprobación)*: **4.1** `/clientes` (rut único e
+- [x] **ETAPA 4 — Clientes, propietarios e inventario de cilindros** *(completada y
+      aprobada)*: **4.1** `/clientes` (rut único e
       inmutable, estados `ACTIVO/INACTIVO/BLOQUEADO`, DELETE solo con cero referencias →
       409) + receptores autorizados anidados (acotados al cliente, `autorizado_por`,
       `vigente_hasta` ≥ fecha de autorización) y `/propietarios` (tipo/rut inmutables,
