@@ -21,6 +21,7 @@ from app.api.v1.endpoints.cilindros import router as cilindros_router
 from app.api.v1.endpoints.clientes import router as clientes_router
 from app.api.v1.endpoints.controles_calidad import router as controles_calidad_router
 from app.api.v1.endpoints.empleados import router as empleados_router
+from app.api.v1.endpoints.entregas import router as entregas_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.endpoints.inspecciones import router as inspecciones_router
@@ -92,17 +93,21 @@ api_router.include_router(movimientos_router, prefix="/movimientos")
 #   reparación TAREA_10/12/13) con cilindros anidados; cada transición emite
 #   movimientos. 5.4 /controles-calidad (TAREA_14), append-only: cada control
 #   mueve el cilindro según su resultado y cierra la orden cuando todos sus
-#   cilindros están controlados.
+#   cilindros están controlados. 5.5 /entregas (TAREA_17 preparar / TAREA_18
+#   entregar): cabecera con cilindros anidados y ciclo BORRADOR→PENDIENTE→
+#   CONFIRMADA→ENTREGADA (CANCELADA); al entregar se emite un Movimiento por
+#   cilindro (D31) que lo pasa a ENTREGADO.
 api_router.include_router(recepciones_router, prefix="/recepciones")
 api_router.include_router(inspecciones_router, prefix="/inspecciones")
 api_router.include_router(ordenes_trabajo_router, prefix="/ordenes-trabajo")
 api_router.include_router(controles_calidad_router, prefix="/controles-calidad")
+api_router.include_router(entregas_router, prefix="/entregas")
 
 # Etapa 6 - Comercial:
 #   productos, servicios, precios, presupuestos
 
-# Etapa 7 - Despacho y entregas:
-#   entregas, devoluciones, choferes, vehiculos, documentos_despacho
+# Etapa 7 - Despacho (restante; entregas ya viva en ETAPA 5.5):
+#   devoluciones, choferes, vehiculos, documentos_despacho
 
 # Etapa 8 - Documentos y valorización:
 #   documentos, pagos, valorizaciones

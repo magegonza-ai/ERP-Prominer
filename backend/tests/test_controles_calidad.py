@@ -620,7 +620,13 @@ async def test_cc_listar_filtros(session_factory) -> None:
         resp = client.get(
             _RUTA_CC,
             headers=headers,
-            params={"hasta": (ahora - timedelta(hours=1)).isoformat()},
+            params={
+                "hasta": (ahora - timedelta(hours=1)).isoformat(),
+                # Filtro acotado al cilindro de este test: la BD de prueba
+                # persiste y con `hasta` global emparejaría los controles
+                # acumulados de corridas anteriores (más de 1 h viejo).
+                "cilindro_id": str(cid),
+            },
         )
         assert resp.json()["total"] == 0
 

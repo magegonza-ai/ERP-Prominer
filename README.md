@@ -16,7 +16,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros),
   **5.2** (inspección de cilindros), **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
   vida), **5.3.b** (tareas asignadas de la orden y reasignación) y **5.4** (control de calidad de
-  cilindros) aprobadas.
+  cilindros) aprobadas, y **5.5** (despacho y entregas) entregada, pendiente de aprobación.
 
 ## Stack
 
@@ -175,7 +175,8 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b y 5.4 aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b y 5.4 aprobadas;
+      5.5 entregada, pendiente de aprobación)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -223,8 +224,22 @@ cd backend
        propio control → 403 `SEPARATION_OF_DUTIES`) y la orden **cierra en la misma transacción**
        cuando todos sus cilindros quedan controlados y ninguno en `PENDIENTE_REVISION`
        (`RECHAZADA` › `REQUIERE_NUEVA_REPARACION` › `APROBADA`) — 370 tests, cobertura 97%,
-       E2E dev 42/42, decisión D35.
-- [ ] **ETAPAS 5.5–12** (pendientes)
+       E2E dev 42/42, decisión D35; **5.5** `/entregas` (dominios TAREA_17 «Preparar
+        entregas» / TAREA_18 «Entregar cilindros», decisión D36): colección única de despacho
+        con cabecera y cilindros anidados, numeración del servidor `ENT-<AÑO>-######` y
+        `cantidad` fija =1 con montos calculados; ciclo `BORRADOR → PENDIENTE → CONFIRMADA →
+        ENTREGADA` (+`CANCELADA` terminal desde `BORRADOR`/`PENDIENTE`) con RBAC por acción
+        (leer TAREA_17∨18 + PERM_01; crear/reemplazar TAREA_17 + PERM_02/03; →`CONFIRMADA`
+        TAREA_17 + PERM_06; **entregar solo TAREA_18** × PERM_06 — quien prepara no entrega —
+        y anular TAREA_17 × PERM_03, pues la matriz no otorga PERM_07), `DELETE` no expuesto
+        (405: se anula por estado) y `PUT` fuera de `BORRADOR` → 400; **RN13**: cilindro
+        `APROBADO` o `LISTO_PARA_ENTREGAR` (si no → 422 `CylinderNotApprovedForDelivery`), del
+        propietario de la cabecera, sin repetirse en la misma cabecera y sin estar en otra
+        entrega activa (409 `DUPLICATE_VALUE`); al pasar a `ENTREGADA` cada cilindro emite un
+        `Movimiento` **atómico** (D31) `→ ENTREGADO` sin cambio de ubicación y con
+        firma/observaciones opcionales; `CANCELADA` no toca el cilindro y lo libera para otra
+        entrega — 396 tests, cobertura 98%, E2E dev 12/12, decisión D36.
+- [ ] **ETAPAS 5.6–12** (pendientes)
 
 ## Decisiones
 
