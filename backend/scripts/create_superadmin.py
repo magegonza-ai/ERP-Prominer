@@ -33,12 +33,14 @@ from app.models import Area, Empleado, EmpleadoTarea, Tarea, Usuario
 
 # Tareas de dominio del RBAC (scripts/seed_data.py): sin ellas el superadmin
 # recibiría 403 en todos los módulos de la API. TAREA_01/02 cubren los
-# maestros de la ETAPA 4.1 (clientes, receptores y propietarios) y
-# TAREA_03/15/16 la ETAPA 4.2 (cilindros, ubicaciones y movimientos).
+# maestros de la ETAPA 4.1 (clientes, receptores y propietarios), TAREA_03/15/16
+# la ETAPA 4.2 (cilindros, ubicaciones y movimientos) y TAREA_04 la ETAPA 5.1
+# (recepción de cilindros).
 TAREAS_SUPERADMIN = (
     "TAREA_01",
     "TAREA_02",
     "TAREA_03",
+    "TAREA_04",
     "TAREA_15",
     "TAREA_16",
     "TAREA_28",
