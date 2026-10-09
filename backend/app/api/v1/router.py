@@ -16,6 +16,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints.areas import router as areas_router
 from app.api.v1.endpoints.auditoria import router as auditoria_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.cambios_propietario import router as cambios_propietario_router
 from app.api.v1.endpoints.categorias import router as categorias_router
 from app.api.v1.endpoints.cilindros import router as cilindros_router
 from app.api.v1.endpoints.clientes import router as clientes_router
@@ -100,13 +101,16 @@ api_router.include_router(movimientos_router, prefix="/movimientos")
 #   cilindro (D31) que lo pasa a ENTREGADO. 5.6 /devoluciones (TAREA_19):
 #   retorno de cilindros ENTREGADO a AGAS; al registrar se emite un Movimiento
 #   por cilindro (D31) que lo deja en RECIBIDO; la anulación (PERM_07) no
-#   revierte la traza.
+#   revierte la traza. 5.7 /cambios-propietario (TAREA_20, matriz [0,3,4] =
+#   PERM_01/04/05): historial append-only; POST (PERM_04) crea el traspaso y lo
+#   aplica al cilindro en la misma transacción; sin PATCH/DELETE (405).
 api_router.include_router(recepciones_router, prefix="/recepciones")
 api_router.include_router(inspecciones_router, prefix="/inspecciones")
 api_router.include_router(ordenes_trabajo_router, prefix="/ordenes-trabajo")
 api_router.include_router(controles_calidad_router, prefix="/controles-calidad")
 api_router.include_router(entregas_router, prefix="/entregas")
 api_router.include_router(devoluciones_router, prefix="/devoluciones")
+api_router.include_router(cambios_propietario_router, prefix="/cambios-propietario")
 
 # Etapa 6 - Comercial:
 #   productos, servicios, precios, presupuestos

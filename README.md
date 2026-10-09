@@ -16,7 +16,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros),
   **5.2** (inspección de cilindros), **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
   vida), **5.3.b** (tareas asignadas de la orden y reasignación), **5.4** (control de calidad de
-  cilindros), **5.5** (despacho y entregas) y **5.6** (devoluciones de cilindros) aprobadas.
+  cilindros), **5.5** (despacho y entregas) y **5.6** (devoluciones de cilindros) aprobadas;
+  **5.7** (cambio de propietario de cilindros) **entregada, pendiente de aprobación**.
 
 ## Stack
 
@@ -175,7 +176,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4, 5.5 y 5.6 aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4, 5.5 y 5.6 aprobadas, 5.7 entregada)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -252,8 +253,22 @@ cd backend
         en el alta) y `DELETE` no expuesto (405: se anula por estado); al registrar se emite un
         `Movimiento` **atómico** por cilindro (D31) `ENTREGADO → RECIBIDO` con
         `usuario_recibe_id` y cambio de ubicación si se indica destino — 422 tests, cobertura
-        98%, E2E dev 16/16, decisión D37.
-- [ ] **ETAPAS 5.7–12** (pendientes)
+        98%, E2E dev 16/16, decisión D37; **5.7** `/cambios-propietario` (guard TAREA_20
+        «Autorizar cambio de propietario», matriz `[0,3,4]` = PERM_01/04/05, decisión D38):
+        historial **append-only** (la tabla existe desde la ETAPA 1, sin migración ni columna
+        `estado`), `POST` = **crear + autorizar en un solo paso atómico** (exige `PERM_04`,
+        no `PERM_02`) con `propietario_anterior_id`, `fecha` y `usuario_autoriza_id` derivados
+        del servidor, cuerpo solo `cilindro_id` (404) / `propietario_nuevo_id` (404; `ACTIVO`
+        o → 400) / `motivo` obligatorio y `documento_respaldo_url`/`observaciones`
+        opcionales; traspaso al mismo propietario actual → **no-op 400**; en la misma
+        transacción `cilindro.propietario_id` pasa al nuevo propietario (única vía de cambio,
+        D29) **sin emitir `Movimiento`** (D31 no aplica: no cambia ubicación ni estado; la
+        traza es el propio historial y revertir es un nuevo registro); consulta por `cilindro`,
+        `propietario_anterior/nuevo`, `usuario_autoriza` y `desde/hasta` y detalle por id;
+        `PATCH`/`DELETE` → 405 (historial firme) y `PERM_05` queda sembrado sin endpoint
+        (precedente PERM_08 de la 4.1): no crear el registro es la negativa — 438 tests,
+        cobertura 98%, E2E dev 10/10, decisión D38.
+- [ ] **ETAPAS 5.8–12** (pendientes)
 
 ## Decisiones
 

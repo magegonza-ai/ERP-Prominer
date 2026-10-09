@@ -49,6 +49,7 @@ TAREA_CONTROL_CALIDAD = "TAREA_14"  # realizar control de calidad (operativo)
 TAREA_PREPARAR_ENTREGAS = "TAREA_17"  # preparar despachos y entregas (operativo)
 TAREA_ENTREGAR = "TAREA_18"  # entregar cilindros en terreno (operativo)
 TAREA_REGISTRAR_DEVOLUCIONES = "TAREA_19"  # registrar devoluciones de cilindros (operativo)
+TAREA_AUTORIZAR_CAMBIO_PROPIETARIO = "TAREA_20"  # autorizar cambio de propietario (admin)
 TAREA_CAMBIO_UBICACION = "TAREA_15"  # cambiar ubicación (operativo)
 TAREA_MOVIMIENTOS = "TAREA_16"  # registrar movimientos (operativo)
 TAREA_USUARIOS = "TAREA_28"  # administrar usuarios, empleados y sesiones
