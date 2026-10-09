@@ -162,3 +162,77 @@ class OrdenTrabajoResponse(BaseModel):
     fecha_actualizacion: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+# ============================================================
+# TAREAS ASIGNADAS (5.3.b)
+# ============================================================
+
+# Valores permitidos por ck_tarea_asig_estado.
+EstadoTareaAsignada = Literal[
+    "PENDIENTE",
+    "ASIGNADA",
+    "EN_PROCESO",
+    "EN_PAUSA",
+    "COMPLETADA",
+    "RECHAZADA",
+    "CANCELADA",
+    "REASIGNADA",
+]
+
+
+class TareaAsignadaCreate(BaseModel):
+    """Asigna una tarea RBAC (`tarea_id`) de una orden a un empleado responsable."""
+
+    tarea_id: uuid.UUID
+    responsable_id: uuid.UUID
+    cilindro_id: uuid.UUID | None = None
+    prioridad: Prioridad = "NORMAL"
+    fecha_estimada_termino: datetime | None = None
+    observaciones: str | None = None
+
+
+class TareaAsignadaUpdate(BaseModel):
+    """
+    Actualización parcial: avance de estado y datos de ejecución.
+    `null` = sin cambio; la transición de `estado` se valida.
+    """
+
+    estado: EstadoTareaAsignada | None = None
+    prioridad: Prioridad | None = None
+    fecha_estimada_termino: datetime | None = None
+    resultado: str | None = None
+    observaciones: str | None = None
+    evidencias: dict | None = None
+
+
+class TareaAsignadaReasignar(BaseModel):
+    """Reasigna la tarea a otro empleado dejando traza (D34)."""
+
+    nuevo_responsable_id: uuid.UUID
+    motivo: str | None = Field(default=None, max_length=200)
+
+
+class TareaAsignadaResponse(BaseModel):
+    """Respuesta de tarea asignada (espejo del modelo, con traza de reasignación)."""
+
+    id: uuid.UUID
+    orden_id: uuid.UUID
+    tarea_id: uuid.UUID
+    cilindro_id: uuid.UUID | None
+    responsable_id: uuid.UUID
+    estado: str
+    prioridad: str
+    fecha_asignacion: datetime
+    fecha_inicio: datetime | None
+    fecha_termino: datetime | None
+    fecha_estimada_termino: datetime | None
+    resultado: str | None
+    observaciones: str | None
+    evidencias: dict | None
+    reasignada_desde_id: uuid.UUID | None
+    usuario_reasigno_id: uuid.UUID | None
+    fecha_reasignacion: datetime | None
+    motivo_reasignacion: str | None
+
+    model_config = {"from_attributes": True}

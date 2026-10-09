@@ -15,7 +15,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   maestros) y **ETAPA 4** (clientes, propietarios e inventario de cilindros): completadas y
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros),
   **5.2** (inspección de cilindros) y **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
-  vida) aprobadas.
+  vida) aprobadas, y **5.3.b** (tareas asignadas de la orden y reasignación) entregada, pendiente
+  de aprobación.
 
 ## Stack
 
@@ -174,7 +175,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2 y 5.3.a aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2 y 5.3.a aprobadas; 5.3.b entregada)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -199,9 +200,17 @@ cd backend
       (`EN_PROCESO_LLENADO`/`EN_REPARACION` → `FINALIZADO_LLENADO`/`REPARADO` →
       `PENDIENTE_CONTROL_CALIDAD`), transición inválida o misma → 409 `allowed_states`,
       sub-recurso de detalles con resultados de ejecución (solo `EN_PROCESO`/`FINALIZADA`)
-      y sin `DELETE` de cabecera (405) — 340 tests, cobertura 97%, E2E dev 57/57; queda
-      **5.3.b** (tareas asignadas, D34) pendiente.
-- [ ] **ETAPAS 5.3.b–12** (pendientes)
+      y sin `DELETE` de cabecera (405) — 340 tests, cobertura 97%, E2E dev 57/57; **5.3.b**
+      `/ordenes-trabajo/{id}/tareas` (tareas asignadas, decisión D34): alta que valida orden
+      (no `CANCELADA`), tarea `ACTIVA`, empleado `ACTIVO` y cilindro **perteneciente a la
+      orden** (asignar = `TAREA_28` + `PERM_09`), avance
+      `ASIGNADA → EN_PROCESO → COMPLETADA` (+`EN_PAUSA`/`CANCELADA`; misma/inválida → 409
+      `allowed_states`) reservado a `TAREA_28`/`TAREA_08`/`TAREA_12` + `PERM_03`, reasignación
+      con **traza** vía `POST /{tareas}/{id}/reasignar` (`TAREA_28` + `PERM_10`: la original
+      pasa a `REASIGNADA` y nace un reemplazo con `reasignada_desde_id`/`usuario_reasigno_id`
+      /`motivo`), listado con filtros (`estado`/`responsable_id`/`tarea_id`), `DELETE` → 405 —
+      351 tests, cobertura 97%, E2E dev 52/52, decisión D34.
+- [ ] **ETAPAS 5.4–12** (pendientes)
 
 ## Decisiones
 

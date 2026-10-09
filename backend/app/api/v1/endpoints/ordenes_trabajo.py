@@ -39,6 +39,7 @@ from sqlalchemy import func, select
 from app.api.deps import (  # noqa: TC001
     CurrentUser,
     RequireAnyTaskPermission,
+    RequireTaskPermission,
     SessionDep,
     obtener_o_404,
 )
@@ -54,8 +55,11 @@ from app.models import (
     Area,
     Cilindro,
     DetalleOrden,
+    Empleado,
     Movimiento,
     OrdenTrabajo,
+    Tarea,
+    TareaAsignada,
     TipoGas,
     Usuario,
 )
@@ -65,11 +69,16 @@ from app.schemas.ordenes_trabajo import (
     DetalleOrdenEjecucionUpdate,
     DetalleOrdenResponse,
     EstadoOrden,
+    EstadoTareaAsignada,
     OrdenTrabajoCreate,
     OrdenTrabajoEstadoUpdate,
     OrdenTrabajoResponse,
     OrdenTrabajoUpdate,
     Prioridad,
+    TareaAsignadaCreate,
+    TareaAsignadaReasignar,
+    TareaAsignadaResponse,
+    TareaAsignadaUpdate,
     TipoOrden,
 )
 
@@ -89,6 +98,13 @@ _LEER = RequireAnyTaskPermission(
     ),
     "PERM_01",
 )
+
+# Tareas asignadas (5.3.b, D34): asignar/reasignar son actos administrativos
+# (TAREA_28); el avance de estado lo hace quien ejecuta (TAREA_08/12) o el
+# administrador, siempre con PERM_03 (modificar).
+_ASIGNAR_TAREA = RequireTaskPermission("TAREA_28", "PERM_09")
+_REASIGNAR_TAREA = RequireTaskPermission("TAREA_28", "PERM_10")
+_MODIFICAR_TAREA = RequireAnyTaskPermission(("TAREA_28", "TAREA_08", "TAREA_12"), "PERM_03")
 
 # Prefijo del correlativo por tipo (D30).
 _PREFIJO = {"LLENADO": "OTL", "REPARACION": "OTR"}
@@ -127,6 +143,17 @@ _ESTADO_CILINDRO = {
     ("REPARACION", "FINALIZADA"): "REPARADO",
     ("REPARACION", "PENDIENTE_CALIDAD"): "PENDIENTE_CONTROL_CALIDAD",
 }
+
+# Transiciones válidas de una tarea asignada (REASIGNADA solo por /reasignar).
+_TRANSICIONES_TAREA = {
+    "PENDIENTE": ("ASIGNADA", "EN_PROCESO", "CANCELADA"),
+    "ASIGNADA": ("EN_PROCESO", "CANCELADA"),
+    "EN_PROCESO": ("EN_PAUSA", "COMPLETADA", "CANCELADA"),
+    "EN_PAUSA": ("EN_PROCESO", "CANCELADA"),
+}
+
+# Estados terminales de una tarea asignada (ya no admite avance ni reasignación).
+_TAREA_TERMINALES = ("COMPLETADA", "RECHAZADA", "CANCELADA", "REASIGNADA")
 
 
 def _respuesta(orden: OrdenTrabajo) -> OrdenTrabajoResponse:
@@ -176,6 +203,27 @@ async def _validar_cilindro_elegible(session, tipo: str, cilindro_id: uuid.UUID)
             f"El cilindro '{cilindro.codigo_interno}' está '{cilindro.estado_operativo}': "
             f"para una orden de {tipo.lower()} debe estar '{esperado}'"
         )
+
+
+def _respuesta_tarea(tarea: TareaAsignada) -> TareaAsignadaResponse:
+    return TareaAsignadaResponse.model_validate(tarea, from_attributes=True)
+
+
+async def _buscar_tarea_asignada(
+    session, orden_id: uuid.UUID, tarea_asignada_id: uuid.UUID
+) -> TareaAsignada:
+    """Tarea asignada acotada a su orden: de otra orden → 404 (no 403)."""
+    tarea = (
+        await session.execute(
+            select(TareaAsignada).where(
+                TareaAsignada.id == tarea_asignada_id,
+                TareaAsignada.orden_id == orden_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if tarea is None:
+        raise NotFound("Tarea asignada", tarea_asignada_id)
+    return tarea
 
 
 # ============================================================
@@ -557,3 +605,217 @@ async def eliminar_detalle(
     await session.delete(detalle)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================================
+# TAREAS ASIGNADAS (5.3.b)
+# ============================================================
+
+
+@router.get(
+    "/{orden_id}/tareas",
+    response_model=Pagina[TareaAsignadaResponse],
+    summary="Listar tareas asignadas de la orden",
+)
+async def listar_tareas(
+    orden_id: uuid.UUID,
+    session: SessionDep,
+    user: Usuario = Depends(_LEER),
+    estado: EstadoTareaAsignada | None = Query(None, description="Filtro exacto por estado."),
+    responsable_id: uuid.UUID | None = Query(None, description="Filtro exacto por responsable."),
+    tarea_id: uuid.UUID | None = Query(None, description="Filtro exacto por tarea del catálogo."),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(20, ge=1, le=100),
+) -> Pagina[TareaAsignadaResponse]:
+    await obtener_o_404(session, OrdenTrabajo, orden_id, "Orden de trabajo")
+    filtros = [TareaAsignada.orden_id == orden_id]
+    if estado:
+        filtros.append(TareaAsignada.estado == estado)
+    if responsable_id:
+        filtros.append(TareaAsignada.responsable_id == responsable_id)
+    if tarea_id:
+        filtros.append(TareaAsignada.tarea_id == tarea_id)
+
+    total = (
+        await session.execute(select(func.count()).select_from(TareaAsignada).where(*filtros))
+    ).scalar_one()
+    filas = (
+        await session.execute(
+            select(TareaAsignada)
+            .where(*filtros)
+            .order_by(TareaAsignada.fecha_asignacion)
+            .offset((pagina - 1) * por_pagina)
+            .limit(por_pagina)
+        )
+    ).scalars().all()
+
+    return Pagina[TareaAsignadaResponse](
+        items=[_respuesta_tarea(f) for f in filas],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        paginas=max(1, -(-total // por_pagina)),
+    )
+
+
+@router.get(
+    "/{orden_id}/tareas/{tarea_asignada_id}",
+    response_model=TareaAsignadaResponse,
+    summary="Detalle de una tarea asignada",
+)
+async def obtener_tarea_asignada(
+    orden_id: uuid.UUID,
+    tarea_asignada_id: uuid.UUID,
+    session: SessionDep,
+    user: Usuario = Depends(_LEER),
+) -> TareaAsignadaResponse:
+    return _respuesta_tarea(await _buscar_tarea_asignada(session, orden_id, tarea_asignada_id))
+
+
+@router.post(
+    "/{orden_id}/tareas",
+    response_model=TareaAsignadaResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Asignar una tarea de la orden a un empleado (TAREA_28 + PERM_09)",
+)
+async def asignar_tarea(
+    orden_id: uuid.UUID,
+    body: TareaAsignadaCreate,
+    session: SessionDep,
+    user: Usuario = Depends(_ASIGNAR_TAREA),
+) -> TareaAsignadaResponse:
+    orden = await obtener_o_404(session, OrdenTrabajo, orden_id, "Orden de trabajo")
+    if orden.estado == "CANCELADA":
+        raise ValidationError(
+            f"La orden '{orden.numero}' está 'CANCELADA': no admite tareas asignadas"
+        )
+
+    tarea = await obtener_o_404(session, Tarea, body.tarea_id, "Tarea")
+    if tarea.estado != "ACTIVA":
+        raise ValidationError(
+            f"La tarea '{tarea.codigo}' está '{tarea.estado}': debe estar 'ACTIVA'"
+        )
+
+    responsable = await obtener_o_404(session, Empleado, body.responsable_id, "Empleado")
+    if responsable.estado != "ACTIVO":
+        raise ValidationError(
+            f"El empleado '{responsable.nombre_completo}' está '{responsable.estado}': "
+            "debe estar 'ACTIVO'"
+        )
+
+    if body.cilindro_id is not None:
+        await obtener_o_404(session, Cilindro, body.cilindro_id, "Cilindro")
+        pertenece = (
+            await session.execute(
+                select(DetalleOrden.id)
+                .where(
+                    DetalleOrden.orden_id == orden_id,
+                    DetalleOrden.cilindro_id == body.cilindro_id,
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if pertenece is None:
+            raise ValidationError("El cilindro indicado no pertenece a la orden")
+
+    tarea_asignada = TareaAsignada(orden_id=orden.id, estado="ASIGNADA", **body.model_dump())
+    session.add(tarea_asignada)
+    await session.commit()
+    await session.refresh(tarea_asignada)
+    return _respuesta_tarea(tarea_asignada)
+
+
+@router.patch(
+    "/{orden_id}/tareas/{tarea_asignada_id}",
+    response_model=TareaAsignadaResponse,
+    summary="Actualizar una tarea asignada (TAREA_28/08/12 + PERM_03)",
+)
+async def actualizar_tarea_asignada(
+    orden_id: uuid.UUID,
+    tarea_asignada_id: uuid.UUID,
+    body: TareaAsignadaUpdate,
+    session: SessionDep,
+    user: Usuario = Depends(_MODIFICAR_TAREA),
+) -> TareaAsignadaResponse:
+    tarea_asignada = await _buscar_tarea_asignada(session, orden_id, tarea_asignada_id)
+
+    # `null` = sin cambio: se filtra antes de validar.
+    datos = {
+        campo: valor
+        for campo, valor in body.model_dump(exclude_unset=True).items()
+        if valor is not None
+    }
+    if not datos:
+        raise ValidationError("No se indicó ningún campo para actualizar")
+
+    nuevo_estado = datos.get("estado")
+    if nuevo_estado is not None:
+        permitidas = _TRANSICIONES_TAREA.get(tarea_asignada.estado, ())
+        if nuevo_estado not in permitidas:
+            raise InvalidStateTransition(
+                "Tarea asignada",
+                tarea_asignada.estado,
+                nuevo_estado,
+                allowed=list(permitidas),
+            )
+
+    for campo, valor in datos.items():
+        setattr(tarea_asignada, campo, valor)
+
+    if tarea_asignada.estado == "EN_PROCESO" and tarea_asignada.fecha_inicio is None:
+        tarea_asignada.fecha_inicio = datetime.now(UTC)
+    if tarea_asignada.estado in _TAREA_TERMINALES and tarea_asignada.fecha_termino is None:
+        tarea_asignada.fecha_termino = datetime.now(UTC)
+
+    await session.commit()
+    await session.refresh(tarea_asignada)
+    return _respuesta_tarea(tarea_asignada)
+
+
+@router.post(
+    "/{orden_id}/tareas/{tarea_asignada_id}/reasignar",
+    response_model=TareaAsignadaResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Reasignar la tarea a otro empleado con traza (TAREA_28 + PERM_10)",
+)
+async def reasignar_tarea_asignada(
+    orden_id: uuid.UUID,
+    tarea_asignada_id: uuid.UUID,
+    body: TareaAsignadaReasignar,
+    session: SessionDep,
+    user: Usuario = Depends(_REASIGNAR_TAREA),
+) -> TareaAsignadaResponse:
+    tarea_asignada = await _buscar_tarea_asignada(session, orden_id, tarea_asignada_id)
+
+    if tarea_asignada.estado in _TAREA_TERMINALES:
+        raise ValidationError(
+            f"La tarea asignada está '{tarea_asignada.estado}': no se puede reasignar"
+        )
+
+    nuevo = await obtener_o_404(session, Empleado, body.nuevo_responsable_id, "Empleado")
+    if nuevo.estado != "ACTIVO":
+        raise ValidationError(
+            f"El empleado '{nuevo.nombre_completo}' está '{nuevo.estado}': debe estar 'ACTIVO'"
+        )
+    if body.nuevo_responsable_id == tarea_asignada.responsable_id:
+        raise ValidationError("El nuevo responsable debe ser distinto del actual")
+
+    # Traza atómica (D34): la original pasa a REASIGNADA y se crea el reemplazo.
+    tarea_asignada.estado = "REASIGNADA"
+    reemplazo = TareaAsignada(
+        orden_id=tarea_asignada.orden_id,
+        tarea_id=tarea_asignada.tarea_id,
+        cilindro_id=tarea_asignada.cilindro_id,
+        responsable_id=body.nuevo_responsable_id,
+        estado="ASIGNADA",
+        prioridad=tarea_asignada.prioridad,
+        fecha_estimada_termino=tarea_asignada.fecha_estimada_termino,
+        reasignada_desde_id=tarea_asignada.id,
+        usuario_reasigno_id=user.id,
+        fecha_reasignacion=datetime.now(UTC),
+        motivo_reasignacion=body.motivo,
+    )
+    session.add(reemplazo)
+    await session.commit()
+    await session.refresh(reemplazo)
+    return _respuesta_tarea(reemplazo)

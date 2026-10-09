@@ -23,9 +23,12 @@ from factories import (
     TAREA_REPARACION_CERRAR,
     TAREA_REPARACION_CREAR,
     TAREA_REPARACION_EJECUTAR,
+    TAREA_USUARIOS,
     cabecera,
     codigo_error,
     crear_cadena_rbac,
+    crear_empleado,
+    crear_tarea_unica,
     prefijo,
     token_de,
 )
@@ -42,13 +45,14 @@ from app.models import (
     Permiso,
     Propietario,
     Tarea,
+    TareaAsignada,
     TareaPermiso,
     TipoGas,
     Ubicacion,
 )
 
 _RUTA = "/api/v1/ordenes-trabajo"
-_PERMISOS = ["PERM_01", "PERM_02", "PERM_03", "PERM_06", "PERM_07"]
+_PERMISOS = ["PERM_01", "PERM_02", "PERM_03", "PERM_06", "PERM_07", "PERM_09", "PERM_10"]
 
 
 def _admin(client: TestClient, user, clave: str) -> dict:
@@ -678,3 +682,426 @@ async def test_orden_delete_cabecera_405(session_factory) -> None:
         resp = await _crear(client, headers, datos)
         orden_id = resp.json()["id"]
         assert client.delete(f"{_RUTA}/{orden_id}", headers=headers).status_code == 405
+
+
+# ============================================================
+# TAREAS ASIGNADAS (5.3.b)
+# ============================================================
+
+
+async def _tarea_id(session_factory, codigo: str) -> uuid.UUID:
+    async with session_factory() as session:
+        return (await session.execute(select(Tarea).where(Tarea.codigo == codigo))).scalar_one().id
+
+
+async def _ctx_tareas(session_factory, *extra_tareas: str):
+    """Usuario que crea órdenes y asigna (TAREA_07+28+08) + tarea/empleado listos."""
+    user, clave = await _dominio(
+        session_factory,
+        TAREA_LLENADO_CREAR,
+        TAREA_USUARIOS,
+        TAREA_LLENADO_EJECUTAR,
+        *extra_tareas,
+    )
+    datos = await _base(session_factory)
+    tarea_id = await _tarea_id(session_factory, TAREA_LLENADO_EJECUTAR)
+    empleado, _area = await crear_empleado(session_factory)
+    return user, clave, datos, tarea_id, empleado
+
+
+def _body_tarea(tarea_id, responsable_id, **extra) -> dict:
+    body = {"tarea_id": str(tarea_id), "responsable_id": str(responsable_id)}
+    body.update(extra)
+    return body
+
+
+async def _asignar(client, headers, orden_id, body):
+    return client.post(f"{_RUTA}/{orden_id}/tareas", headers=headers, json=body)
+
+
+async def test_tarea_asignar_listar_y_consultar(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+
+        resp = await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        assert resp.status_code == 201, resp.text
+        data = resp.json()
+        assert data["estado"] == "ASIGNADA"
+        assert data["responsable_id"] == str(empleado.id)
+        assert data["tarea_id"] == str(tarea_id)
+        assert data["orden_id"] == orden_id
+        assert data["fecha_asignacion"] is not None
+
+        listado = client.get(f"{_RUTA}/{orden_id}/tareas", headers=headers)
+        assert listado.status_code == 200
+        assert listado.json()["total"] == 1
+        ta_id = data["id"]
+        detalle = client.get(f"{_RUTA}/{orden_id}/tareas/{ta_id}", headers=headers)
+        assert detalle.status_code == 200
+        assert detalle.json()["id"] == ta_id
+
+
+async def test_tarea_asignar_con_cilindro_de_la_orden(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        cilindro_id = datos["cilindros"][0]
+        resp = await _asignar(
+            client,
+            headers,
+            orden_id,
+            _body_tarea(tarea_id, empleado.id, cilindro_id=str(cilindro_id)),
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["cilindro_id"] == str(cilindro_id)
+
+
+async def test_tarea_asignar_validaciones(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    otra = await _base(session_factory)
+    tarea_inactiva = await crear_tarea_unica(session_factory)
+    empleado_inactivo, _area = await crear_empleado(session_factory, estado="INACTIVO")
+    async with session_factory() as session:
+        tarea = await session.get(Tarea, tarea_inactiva.id)
+        tarea.estado = "INACTIVA"
+        await session.commit()
+
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+
+        # Orden desconocida.
+        resp = await _asignar(client, headers, uuid.uuid4(), _body_tarea(tarea_id, empleado.id))
+        assert resp.status_code == 404
+        # Tarea desconocida.
+        resp = await _asignar(client, headers, orden_id, _body_tarea(uuid.uuid4(), empleado.id))
+        assert resp.status_code == 404
+        # Empleado desconocido.
+        resp = await _asignar(client, headers, orden_id, _body_tarea(tarea_id, uuid.uuid4()))
+        assert resp.status_code == 404
+        # Cilindro que no pertenece a la orden.
+        resp = await _asignar(
+            client,
+            headers,
+            orden_id,
+            _body_tarea(tarea_id, empleado.id, cilindro_id=str(otra["cilindros"][0])),
+        )
+        assert resp.status_code == 400
+        assert codigo_error(resp) == "VALIDATION_ERROR"
+        # Tarea no ACTIVA.
+        resp = await _asignar(
+            client, headers, orden_id, _body_tarea(tarea_inactiva.id, empleado.id)
+        )
+        assert resp.status_code == 400
+        # Empleado no ACTIVO.
+        resp = await _asignar(
+            client, headers, orden_id, _body_tarea(tarea_id, empleado_inactivo.id)
+        )
+        assert resp.status_code == 400
+        # Orden CANCELADA.
+        client.patch(
+            f"{_RUTA}/{orden_id}/estado", headers=headers, json={"estado": "CANCELADA"}
+        )
+        resp = await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        assert resp.status_code == 400
+        assert codigo_error(resp) == "VALIDATION_ERROR"
+
+
+async def test_tarea_patch_transiciones(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        ta_id = (
+            await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        ).json()["id"]
+
+        # Misma transición (ASIGNADA → ASIGNADA) → 409 con allowed_states.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}", headers=headers, json={"estado": "ASIGNADA"}
+        )
+        assert resp.status_code == 409
+        assert codigo_error(resp) == "INVALID_STATE_TRANSITION"
+        assert resp.json()["detail"]["extra"]["allowed_states"] == ["EN_PROCESO", "CANCELADA"]
+
+        # ASIGNADA → EN_PROCESO fija fecha_inicio.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}",
+            headers=headers,
+            json={"estado": "EN_PROCESO"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["fecha_inicio"] is not None
+
+        # EN_PROCESO → COMPLETADA fija fecha_termino.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}",
+            headers=headers,
+            json={"estado": "COMPLETADA", "resultado": "Llenado conforme"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["fecha_termino"] is not None
+
+        # Estado terminal → 409.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}",
+            headers=headers,
+            json={"estado": "EN_PROCESO"},
+        )
+        assert resp.status_code == 409
+        assert codigo_error(resp) == "INVALID_STATE_TRANSITION"
+
+
+async def test_tarea_patch_sin_campos_y_datos_ejecucion(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        ta_id = (
+            await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        ).json()["id"]
+
+        # Sin campos → 400.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}", headers=headers, json={}
+        )
+        assert resp.status_code == 400
+        assert codigo_error(resp) == "VALIDATION_ERROR"
+
+        # `null` = sin cambio; se actualizan prioridad/observaciones/evidencias.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}",
+            headers=headers,
+            json={
+                "estado": None,
+                "prioridad": "URGENTE",
+                "observaciones": "Revisar válvula",
+                "evidencias": {"foto": "a.jpg"},
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data["estado"] == "ASIGNADA"
+        assert data["prioridad"] == "URGENTE"
+        assert data["observaciones"] == "Revisar válvula"
+        assert data["evidencias"] == {"foto": "a.jpg"}
+
+
+async def test_tarea_guards_por_dominio(session_factory) -> None:
+    admin, clave_admin, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    user07, clave07 = await _dominio(session_factory, TAREA_LLENADO_CREAR)
+    otro, _area = await crear_empleado(session_factory)
+
+    with TestClient(app) as client:
+        ha = _admin(client, admin, clave_admin)
+        orden_id = (await _crear(client, ha, datos)).json()["id"]
+        ta_id = (
+            await _asignar(client, ha, orden_id, _body_tarea(tarea_id, empleado.id))
+        ).json()["id"]
+
+        hb = _admin(client, user07, clave07)
+        # Asignar exige TAREA_28 (no la tiene) → 403.
+        resp = await _asignar(client, hb, orden_id, _body_tarea(tarea_id, empleado.id))
+        assert resp.status_code == 403
+        assert codigo_error(resp) == "PERMISSION_DENIED"
+        # Modificar exige TAREA_28/08/12 (no las tiene) → 403.
+        resp = client.patch(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}",
+            headers=hb,
+            json={"estado": "EN_PROCESO"},
+        )
+        assert resp.status_code == 403
+        # Reasignar exige TAREA_28 → 403.
+        resp = client.post(
+            f"{_RUTA}/{orden_id}/tareas/{ta_id}/reasignar",
+            headers=hb,
+            json={"nuevo_responsable_id": str(otro.id)},
+        )
+        assert resp.status_code == 403
+
+
+async def test_tarea_reasignar_con_traza(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    nuevo, _area = await crear_empleado(session_factory)
+    inactivo, _area2 = await crear_empleado(session_factory, estado="INACTIVO")
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        original = (
+            await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        ).json()
+
+        resp = client.post(
+            f"{_RUTA}/{orden_id}/tareas/{original['id']}/reasignar",
+            headers=headers,
+            json={"nuevo_responsable_id": str(nuevo.id), "motivo": "Vacaciones"},
+        )
+        assert resp.status_code == 201, resp.text
+        nueva = resp.json()
+        assert nueva["responsable_id"] == str(nuevo.id)
+        assert nueva["estado"] == "ASIGNADA"
+        assert nueva["reasignada_desde_id"] == original["id"]
+        assert nueva["usuario_reasigno_id"] == str(user.id)
+        assert nueva["fecha_reasignacion"] is not None
+        assert nueva["motivo_reasignacion"] == "Vacaciones"
+
+        # La original queda REASIGNADA.
+        detalle = client.get(
+            f"{_RUTA}/{orden_id}/tareas/{original['id']}", headers=headers
+        ).json()
+        assert detalle["estado"] == "REASIGNADA"
+        async with session_factory() as session:
+            orig = await session.get(TareaAsignada, uuid.UUID(original["id"]))
+            reemplazo = await session.get(TareaAsignada, uuid.UUID(nueva["id"]))
+            assert orig.estado == "REASIGNADA"
+            assert reemplazo.reasignada_desde_id == orig.id
+
+        # Reasignar la original (terminal) → 400.
+        resp = client.post(
+            f"{_RUTA}/{orden_id}/tareas/{original['id']}/reasignar",
+            headers=headers,
+            json={"nuevo_responsable_id": str(empleado.id)},
+        )
+        assert resp.status_code == 400
+        # Mismo responsable → 400.
+        resp = client.post(
+            f"{_RUTA}/{orden_id}/tareas/{nueva['id']}/reasignar",
+            headers=headers,
+            json={"nuevo_responsable_id": str(nuevo.id)},
+        )
+        assert resp.status_code == 400
+        # Nuevo responsable inactivo → 400.
+        resp = client.post(
+            f"{_RUTA}/{orden_id}/tareas/{nueva['id']}/reasignar",
+            headers=headers,
+            json={"nuevo_responsable_id": str(inactivo.id)},
+        )
+        assert resp.status_code == 400
+        assert codigo_error(resp) == "VALIDATION_ERROR"
+
+
+async def _set_matriz(session_factory, codigo_permiso: str, concedido: bool) -> bool:
+    """Concede/revoca un permiso en TAREA_28; devuelve el valor anterior."""
+    async with session_factory() as session:
+        tarea = (
+            await session.execute(select(Tarea).where(Tarea.codigo == TAREA_USUARIOS))
+        ).scalar_one()
+        permiso = (
+            await session.execute(select(Permiso).where(Permiso.codigo == codigo_permiso))
+        ).scalar_one()
+        fila = (
+            await session.execute(
+                select(TareaPermiso).where(
+                    TareaPermiso.tarea_id == tarea.id,
+                    TareaPermiso.permiso_id == permiso.id,
+                )
+            )
+        ).scalar_one()
+        anterior = fila.concedido
+        fila.concedido = concedido
+        await session.commit()
+        return anterior
+
+
+async def test_tarea_reasignar_sin_permiso_403(session_factory) -> None:
+    admin, clave_admin, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    # Usuario con SOLO TAREA_28: así revocar su PERM_10 no se compensa con
+    # otra tarea que lo tenga concedido (la matriz es global por tarea).
+    solo28, clave28 = await _dominio(session_factory, TAREA_USUARIOS)
+    nuevo, _area = await crear_empleado(session_factory)
+
+    anterior = await _set_matriz(session_factory, "PERM_10", False)
+    try:
+        with TestClient(app) as client:
+            ha = _admin(client, admin, clave_admin)
+            orden_id = (await _crear(client, ha, datos)).json()["id"]
+            ta_id = (
+                await _asignar(client, ha, orden_id, _body_tarea(tarea_id, empleado.id))
+            ).json()["id"]
+
+            hb = _admin(client, solo28, clave28)
+            resp = client.post(
+                f"{_RUTA}/{orden_id}/tareas/{ta_id}/reasignar",
+                headers=hb,
+                json={"nuevo_responsable_id": str(nuevo.id)},
+            )
+            assert resp.status_code == 403
+            assert codigo_error(resp) == "PERMISSION_DENIED"
+    finally:
+        await _set_matriz(session_factory, "PERM_10", bool(anterior))
+
+
+async def test_tarea_asignar_sin_permiso_09_403(session_factory) -> None:
+    admin, clave_admin, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    solo28, clave28 = await _dominio(session_factory, TAREA_USUARIOS)
+
+    anterior = await _set_matriz(session_factory, "PERM_09", False)
+    try:
+        with TestClient(app) as client:
+            ha = _admin(client, admin, clave_admin)
+            orden_id = (await _crear(client, ha, datos)).json()["id"]
+
+            hb = _admin(client, solo28, clave28)
+            resp = await _asignar(client, hb, orden_id, _body_tarea(tarea_id, empleado.id))
+            assert resp.status_code == 403
+            assert codigo_error(resp) == "PERMISSION_DENIED"
+    finally:
+        await _set_matriz(session_factory, "PERM_09", bool(anterior))
+
+
+async def test_tarea_listar_filtros(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    otro, _area = await crear_empleado(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        await _asignar(client, headers, orden_id, _body_tarea(tarea_id, otro.id))
+
+        base = f"{_RUTA}/{orden_id}/tareas"
+        assert client.get(base, headers=headers).json()["total"] == 2
+        assert (
+            client.get(base, headers=headers, params={"estado": "ASIGNADA"}).json()["total"] == 2
+        )
+        assert (
+            client.get(base, headers=headers, params={"estado": "COMPLETADA"}).json()["total"]
+            == 0
+        )
+        assert (
+            client.get(
+                base, headers=headers, params={"responsable_id": str(empleado.id)}
+            ).json()["total"]
+            == 1
+        )
+        assert (
+            client.get(base, headers=headers, params={"tarea_id": str(tarea_id)}).json()["total"]
+            == 2
+        )
+
+
+async def test_tarea_metodos_no_expuestos_y_404(session_factory) -> None:
+    user, clave, datos, tarea_id, empleado = await _ctx_tareas(session_factory)
+    datos2 = await _base(session_factory)
+    with TestClient(app) as client:
+        headers = _admin(client, user, clave)
+        orden_id = (await _crear(client, headers, datos)).json()["id"]
+        ta_id = (
+            await _asignar(client, headers, orden_id, _body_tarea(tarea_id, empleado.id))
+        ).json()["id"]
+
+        # Sin DELETE (405).
+        assert (
+            client.delete(f"{_RUTA}/{orden_id}/tareas/{ta_id}", headers=headers).status_code == 405
+        )
+        # Tarea asignada desconocida → 404.
+        resp = client.get(f"{_RUTA}/{orden_id}/tareas/{uuid.uuid4()}", headers=headers)
+        assert resp.status_code == 404
+        assert codigo_error(resp) == "NOT_FOUND"
+        # Tarea asignada de otra orden → 404.
+        orden2 = (await _crear(client, headers, datos2)).json()["id"]
+        resp = client.get(f"{_RUTA}/{orden2}/tareas/{ta_id}", headers=headers)
+        assert resp.status_code == 404
+        assert codigo_error(resp) == "NOT_FOUND"
