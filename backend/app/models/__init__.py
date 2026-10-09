@@ -40,6 +40,7 @@ from app.models.delivery import (
     Entrega,
     Pago,
 )
+from app.models.devoluciones import Devolucion, DevolucionDetalle
 from app.models.master_data import (
     Area,
     Categoria,
@@ -112,6 +113,9 @@ __all__ = [
     "DocumentoComercial",
     "Pago",
     "CambioPropietario",
+    # Devoluciones
+    "Devolucion",
+    "DevolucionDetalle",
     # Audit
     "Propietario",
     "Cliente",

@@ -96,6 +96,7 @@ class Cilindro(BaseModel, SoftDeleteMixin):
     controles_calidad: Mapped[List[ControlCalidad]] = relationship(back_populates="cilindro")
     movimientos: Mapped[List[Movimiento]] = relationship(back_populates="cilindro")
     entregas: Mapped[List[DetalleEntrega]] = relationship(back_populates="cilindro")
+    devoluciones: Mapped[List[DevolucionDetalle]] = relationship(back_populates="cilindro")
     cambios_propietario: Mapped[List[CambioPropietario]] = relationship(back_populates="cilindro")
     fotografias: Mapped[List[Fotografia]] = relationship(
         primaryjoin=(

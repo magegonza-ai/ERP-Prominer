@@ -16,7 +16,8 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   aprobadas. **ETAPA 5 (Operaciones)** en curso: subetapas **5.1** (recepción de cilindros),
   **5.2** (inspección de cilindros), **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
   vida), **5.3.b** (tareas asignadas de la orden y reasignación), **5.4** (control de calidad de
-  cilindros) y **5.5** (despacho y entregas) aprobadas.
+  cilindros), **5.5** (despacho y entregas) aprobadas; **5.6** (devoluciones) entregada,
+  pendiente de aprobación.
 
 ## Stack
 
@@ -39,7 +40,7 @@ ERP-Prominer/
 │   ├── app/
 │   │   ├── api/v1/         # Endpoints REST (por etapas)
 │   │   ├── core/           # Seguridad, permisos, auditoría, excepciones
-│   │   ├── models/         # 44 modelos SQLAlchemy 2.0
+│   │   ├── models/         # 46 modelos SQLAlchemy 2.0
 │   │   ├── config.py       # Settings (Pydantic)
 │   │   ├── database.py     # Engine async + session factory
 │   │   └── main.py         # Aplicación FastAPI
@@ -175,7 +176,8 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4 y 5.5 aprobadas)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4 y 5.5 aprobadas;
+      5.6 entregada, pendiente de aprobación)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
@@ -237,8 +239,23 @@ cd backend
         entrega activa (409 `DUPLICATE_VALUE`); al pasar a `ENTREGADA` cada cilindro emite un
         `Movimiento` **atómico** (D31) `→ ENTREGADO` sin cambio de ubicación y con
         firma/observaciones opcionales; `CANCELADA` no toca el cilindro y lo libera para otra
-        entrega — 396 tests, cobertura 98%, E2E dev 12/12, decisión D36.
-- [ ] **ETAPAS 5.6–12** (pendientes)
+        entrega — 396 tests, cobertura 98%, E2E dev 12/12, decisión D36; **5.6**
+        `/devoluciones` (guard TAREA_19 «Registrar devoluciones», matriz sembrada
+        `[0,1,2,7]` = PERM_01/02/03/07, decisión D37): retorno de cilindros `ENTREGADO` a
+        AGAS con cabecera y cilindros anidados inline (`DevolucionDetalle`, ≥ 1; repetido o
+        en otra devolución activa → 409 `DUPLICATE_VALUE`; no `ENTREGADO` → 400; cliente
+        404 / `INACTIVO` 400; `entrega_id` y `ubicacion_destino_id` opcionales → 404),
+        numeración del servidor `DEV-<AÑO>-######`, `motivo`
+        `DEVOLUCION_CLIENTE|DANO_EN_TRANSITO|ERROR_ENTREGA|GARANTIA|OTRO` y `estado_fisico`
+        `BUENO|REGULAR|MALO|CRITICO`; ciclo `REGISTRADA → ANULADA` (terminal; misma/inválida
+        → 409 con `allowed_states`) donde **anular exige PERM_07** y **no revierte la traza**
+        (el cilindro ya regresó físicamente como `RECIBIDO`), edición de campos descriptivos
+        solo en `REGISTRADA` (sin tocar detalles ni `ubicacion_destino_id`, ya materializados
+        en el alta) y `DELETE` no expuesto (405: se anula por estado); al registrar se emite un
+        `Movimiento` **atómico** por cilindro (D31) `ENTREGADO → RECIBIDO` con
+        `usuario_recibe_id` y cambio de ubicación si se indica destino — 422 tests, cobertura
+        98%, E2E dev 16/16, decisión D37.
+- [ ] **ETAPAS 5.7–12** (pendientes)
 
 ## Decisiones
 

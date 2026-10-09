@@ -20,6 +20,7 @@ from app.api.v1.endpoints.categorias import router as categorias_router
 from app.api.v1.endpoints.cilindros import router as cilindros_router
 from app.api.v1.endpoints.clientes import router as clientes_router
 from app.api.v1.endpoints.controles_calidad import router as controles_calidad_router
+from app.api.v1.endpoints.devoluciones import router as devoluciones_router
 from app.api.v1.endpoints.empleados import router as empleados_router
 from app.api.v1.endpoints.entregas import router as entregas_router
 from app.api.v1.endpoints.formas_pago import router as formas_pago_router
@@ -96,18 +97,22 @@ api_router.include_router(movimientos_router, prefix="/movimientos")
 #   cilindros están controlados. 5.5 /entregas (TAREA_17 preparar / TAREA_18
 #   entregar): cabecera con cilindros anidados y ciclo BORRADOR→PENDIENTE→
 #   CONFIRMADA→ENTREGADA (CANCELADA); al entregar se emite un Movimiento por
-#   cilindro (D31) que lo pasa a ENTREGADO.
+#   cilindro (D31) que lo pasa a ENTREGADO. 5.6 /devoluciones (TAREA_19):
+#   retorno de cilindros ENTREGADO a AGAS; al registrar se emite un Movimiento
+#   por cilindro (D31) que lo deja en RECIBIDO; la anulación (PERM_07) no
+#   revierte la traza.
 api_router.include_router(recepciones_router, prefix="/recepciones")
 api_router.include_router(inspecciones_router, prefix="/inspecciones")
 api_router.include_router(ordenes_trabajo_router, prefix="/ordenes-trabajo")
 api_router.include_router(controles_calidad_router, prefix="/controles-calidad")
 api_router.include_router(entregas_router, prefix="/entregas")
+api_router.include_router(devoluciones_router, prefix="/devoluciones")
 
 # Etapa 6 - Comercial:
 #   productos, servicios, precios, presupuestos
 
-# Etapa 7 - Despacho (restante; entregas ya viva en ETAPA 5.5):
-#   devoluciones, choferes, vehiculos, documentos_despacho
+# Etapa 7 - Despacho (restante; entregas 5.5 y devoluciones 5.6 ya vivas):
+#   choferes, vehiculos, documentos_despacho
 
 # Etapa 8 - Documentos y valorización:
 #   documentos, pagos, valorizaciones

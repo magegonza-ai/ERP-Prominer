@@ -37,8 +37,9 @@ from app.models import Area, Empleado, EmpleadoTarea, Tarea, Usuario
 # la ETAPA 4.2 (cilindros, ubicaciones y movimientos), TAREA_04 la ETAPA 5.1
 # (recepción de cilindros), TAREA_05 la ETAPA 5.2 (inspección de cilindros),
 # TAREA_07/08/09/10/11/12/13 la ETAPA 5.3 (órdenes de llenado y reparación),
-# TAREA_14 la ETAPA 5.4 (control de calidad) y TAREA_17/18 la ETAPA 5.5
-# (preparación y entrega de cilindros).
+# TAREA_14 la ETAPA 5.4 (control de calidad), TAREA_17/18 la ETAPA 5.5
+# (preparación y entrega de cilindros) y TAREA_19 la ETAPA 5.6 (devoluciones
+# de cilindros).
 TAREAS_SUPERADMIN = (
     "TAREA_01",
     "TAREA_02",
@@ -57,6 +58,7 @@ TAREAS_SUPERADMIN = (
     "TAREA_16",
     "TAREA_17",
     "TAREA_18",
+    "TAREA_19",
     "TAREA_28",
     "TAREA_29",
     "TAREA_30",
