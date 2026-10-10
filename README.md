@@ -17,7 +17,7 @@ comercial, documentos tributarios y trazabilidad total con auditoría.
   **5.2** (inspección de cilindros), **5.3.a** (órdenes de trabajo: cabecera, detalles y ciclo de
   vida), **5.3.b** (tareas asignadas de la orden y reasignación), **5.4** (control de calidad de
   cilindros), **5.5** (despacho y entregas) y **5.6** (devoluciones de cilindros) aprobadas;
-  **5.7** (cambio de propietario de cilindros) **entregada, pendiente de aprobación**.
+  **5.7** (cambio de propietario de cilindros) **aprobada**.
 
 ## Stack
 
@@ -176,7 +176,7 @@ cd backend
       atómico con origen/`estado_anterior` derivados del servidor, no-op → 400, reglas de la
       ubicación solo con cambio real de ubicación) — 264 tests, cobertura 97%, E2E dev
       59/59, decisión D29.
-- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4, 5.5 y 5.6 aprobadas, 5.7 entregada)*:
+- [ ] **ETAPA 5 — Operaciones** *(en curso; 5.1, 5.2, 5.3.a, 5.3.b, 5.4, 5.5 y 5.6 aprobadas, 5.7 aprobada)*:
       **5.1** `/recepciones` (guard TAREA_04): cabecera con `numero` del servidor
       (`REC-<AÑO>-######`), `fecha_hora`/`usuario_responsable_id` derivados, FKs → 404,
       estados `COMPLETADA ⇄ ANULADA` (misma transición → 409 con `allowed_states`) y
